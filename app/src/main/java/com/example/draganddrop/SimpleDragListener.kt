@@ -2,6 +2,13 @@ package com.example.draganddrop
 
 import android.view.DragEvent
 import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.Animation
+import android.view.animation.TranslateAnimation
+import android.view.animation.AlphaAnimation
+import android.view.animation.ScaleAnimation
+import android.view.animation.AnimationSet
+import android.view.animation.DecelerateInterpolator
 import androidx.recyclerview.widget.RecyclerView
 
 class SimpleDragListener(
@@ -20,6 +27,14 @@ class SimpleDragListener(
     private var currentFocusedView: View? = null
     private var currentFocusedPosition = -1
     private var currentFocusedRecyclerView: RecyclerView? = null
+    
+    // Floating animation
+    private var floatingAnimation: Animation? = null
+    private var isFloating = false
+    
+    // Slow-motion animation settings
+    private val SLOW_MOTION_DURATION = 1500L // 1.5 seconds for smooth transitions
+    private val SLOW_MOTION_INTERPOLATOR = DecelerateInterpolator(2.0f)
 
     override fun onDrag(view: View, event: DragEvent): Boolean {
         android.util.Log.d("SimpleDragListener", "onDrag called: action=${event.action}, view=${view.id}")
@@ -69,6 +84,13 @@ class SimpleDragListener(
                     android.util.Log.d("SimpleDragListener", "From: ${if (fromRecycler.id == R.id.left_recycler_view) "LEFT" else "RIGHT"} pos $draggedFromPosition")
                     android.util.Log.d("SimpleDragListener", "To: ${if (targetRecyclerView.id == R.id.left_recycler_view) "LEFT" else "RIGHT"} pos $targetPosition")
                     
+                    // Execute move immediately but with visual feedback
+                    android.util.Log.d("SimpleDragListener", "Executing move with visual feedback")
+                    
+                    // Show move in progress visual feedback
+                    showMoveInProgress(targetRecyclerView, targetPosition)
+                    
+                    // Execute the move
                     dataManager.moveItem(
                         fromRecycler,
                         draggedFromPosition,
@@ -134,45 +156,10 @@ class SimpleDragListener(
             android.util.Log.d("SimpleDragListener", "Found child view at position: $position")
             
             if (position != RecyclerView.NO_POSITION && position >= 0) {
-                // Temporarily disable coverage check for debugging
-                android.util.Log.d("SimpleDragListener", "Coverage check disabled for debugging")
-                // Check if coverage is sufficient (90% requirement)
-                // if (!isCoverageSufficient(draggedItemView, childView, x, y)) {
-                //     android.util.Log.d("SimpleDragListener", "Insufficient coverage - drop rejected")
-                //     return -1
-                // }
-                // Check if we're dropping in the upper or lower half of the child view
-                val childTop = childView.top
-                val childBottom = childView.bottom
-                
-                val isRightRecyclerView = targetRecyclerView.id == R.id.right_recycler_view
-                
-                // Simple 50/50 drop zone calculation for predictable behavior
-                val childHeight = childBottom - childTop
-                val childCenter = childTop + (childHeight / 2)
-                
-                android.util.Log.d("SimpleDragListener", "Child bounds: top=$childTop, bottom=$childBottom, center=$childCenter, drop_y=$y")
-                
-                if (y < childCenter) {
-                    // Dropping in upper half - insert before this item
-                    android.util.Log.d("SimpleDragListener", "Dropping in upper half, position: $position")
-                    return position
-                } else {
-                    // Dropping in lower half - insert after this item
-                    val insertPosition = position + 1
-                    
-                    // For right RecyclerView, ensure we don't exceed valid positions
-                    val finalPosition = if (isRightRecyclerView) {
-                        // Right RecyclerView has positions 0, 1, and we allow 2 for the end
-                        insertPosition.coerceAtMost(2)
-                    } else {
-                        // Left RecyclerView can have any position
-                        insertPosition
-                    }
-                    
-                    android.util.Log.d("SimpleDragListener", "Dropping in lower half, position: $finalPosition (original: $insertPosition, isRight: $isRightRecyclerView)")
-                    return finalPosition
-                }
+                // Calculate drop position based on center of target item
+                val dropPosition = calculateCenterBasedPosition(childView, position, targetRecyclerView, x, y)
+                android.util.Log.d("SimpleDragListener", "Center-based drop position: $dropPosition")
+                return dropPosition
             } else {
                 // Found child view but invalid position - treat as empty space
                 android.util.Log.d("SimpleDragListener", "Found child view but invalid position: $position, treating as empty space")
@@ -284,25 +271,22 @@ class SimpleDragListener(
             currentFocusedPosition = targetPosition
             currentFocusedRecyclerView = targetRecyclerView
             
-            // Apply focus visual effects
-            targetView.alpha = 0.8f
-            targetView.scaleX = 1.05f
-            targetView.scaleY = 1.05f
-            targetView.elevation = 8f
+            // Apply slow-motion space occupation visual effects
+            animateToOccupiedState(targetView)
             
-            android.util.Log.d("SimpleDragListener", "Target focus set: position $targetPosition")
+            android.util.Log.d("SimpleDragListener", "Target space occupied: position $targetPosition")
         }
     }
     
     private fun clearTargetFocus() {
         currentFocusedView?.let { view ->
-            // Reset visual effects
-            view.alpha = 1.0f
-            view.scaleX = 1.0f
-            view.scaleY = 1.0f
-            view.elevation = 0f
+            // Stop floating animation
+            stopFloatingAnimation()
             
-            android.util.Log.d("SimpleDragListener", "Target focus cleared")
+            // Animate back to normal state with slow-motion
+            animateToNormalState(view)
+            
+            android.util.Log.d("SimpleDragListener", "Target space cleared")
         }
         
         currentFocusedView = null
@@ -327,6 +311,157 @@ class SimpleDragListener(
             }
         } else {
             clearTargetFocus()
+        }
+    }
+    
+    private fun startFloatingAnimation(view: View) {
+        if (isFloating) return
+        
+        isFloating = true
+        
+        // Create floating animation (up and down movement)
+        val floatUp = TranslateAnimation(0f, 0f, 0f, -8f)
+        floatUp.duration = 800
+        floatUp.interpolator = AccelerateDecelerateInterpolator()
+        
+        val floatDown = TranslateAnimation(0f, 0f, -8f, 0f)
+        floatDown.duration = 800
+        floatDown.interpolator = AccelerateDecelerateInterpolator()
+        floatDown.startOffset = 800
+        
+        // Create animation set
+        val animationSet = android.view.animation.AnimationSet(false)
+        animationSet.addAnimation(floatUp)
+        animationSet.addAnimation(floatDown)
+        animationSet.repeatCount = Animation.INFINITE
+        animationSet.repeatMode = Animation.REVERSE
+        
+        floatingAnimation = animationSet
+        view.startAnimation(animationSet)
+        
+        android.util.Log.d("SimpleDragListener", "Floating animation started")
+    }
+    
+    private fun stopFloatingAnimation() {
+        if (!isFloating) return
+        
+        floatingAnimation?.let { animation ->
+            animation.cancel()
+            currentFocusedView?.clearAnimation()
+        }
+        
+        floatingAnimation = null
+        isFloating = false
+        
+        android.util.Log.d("SimpleDragListener", "Floating animation stopped")
+    }
+    
+    private fun animateToOccupiedState(view: View) {
+        // Apply visual changes immediately
+        view.alpha = 0.3f
+        view.scaleX = 0.95f
+        view.scaleY = 0.95f
+        view.elevation = 2f
+        view.setBackgroundColor(0x40FF0000) // Semi-transparent red background
+        view.setPadding(4, 4, 4, 4) // Add padding to create border effect
+        
+        // Add a simple pulse animation
+        val pulseAnimation = ScaleAnimation(
+            0.95f, 1.0f,  // scaleX from 0.95 to 1.0
+            0.95f, 1.0f,  // scaleY from 0.95 to 1.0
+            Animation.RELATIVE_TO_SELF, 0.5f,  // pivotX center
+            Animation.RELATIVE_TO_SELF, 0.5f   // pivotY center
+        )
+        pulseAnimation.duration = 1000
+        pulseAnimation.repeatCount = Animation.INFINITE
+        pulseAnimation.repeatMode = Animation.REVERSE
+        pulseAnimation.interpolator = AccelerateDecelerateInterpolator()
+        
+        view.startAnimation(pulseAnimation)
+        
+        android.util.Log.d("SimpleDragListener", "Occupied animation started")
+    }
+    
+    private fun animateToNormalState(view: View) {
+        // Stop any current animation
+        view.clearAnimation()
+        
+        // Reset visual properties immediately
+        view.alpha = 1.0f
+        view.scaleX = 1.0f
+        view.scaleY = 1.0f
+        view.elevation = 0f
+        view.setBackgroundColor(0x00000000) // Clear background
+        view.setPadding(0, 0, 0, 0) // Reset padding
+        
+        android.util.Log.d("SimpleDragListener", "Normal state restored")
+    }
+    
+    private fun showMoveInProgress(targetRecyclerView: RecyclerView, targetPosition: Int) {
+        // Find the target view to show move in progress
+        val targetView = targetRecyclerView.findViewHolderForAdapterPosition(targetPosition)?.itemView
+        
+        if (targetView != null) {
+            // Create a pulsing animation to show move in progress
+            val pulseAnimation = ScaleAnimation(
+                1.0f, 1.1f,  // scaleX from 1.0 to 1.1
+                1.0f, 1.1f,  // scaleY from 1.0 to 1.1
+                Animation.RELATIVE_TO_SELF, 0.5f,  // pivotX center
+                Animation.RELATIVE_TO_SELF, 0.5f   // pivotY center
+            )
+            pulseAnimation.duration = 250
+            pulseAnimation.repeatCount = 1
+            pulseAnimation.repeatMode = Animation.REVERSE
+            pulseAnimation.interpolator = AccelerateDecelerateInterpolator()
+            
+            // Start the pulse animation
+            targetView.startAnimation(pulseAnimation)
+            
+            android.util.Log.d("SimpleDragListener", "Move in progress animation started")
+        }
+    }
+    
+    private fun calculateCenterBasedPosition(childView: View, position: Int, targetRecyclerView: RecyclerView, dropX: Int, dropY: Int): Int {
+        val childTop = childView.top
+        val childBottom = childView.bottom
+        val childLeft = childView.left
+        val childRight = childView.right
+        
+        val isRightRecyclerView = targetRecyclerView.id == R.id.right_recycler_view
+        
+        // Calculate the center of the target item
+        val childCenterY = childTop + (childBottom - childTop) / 2
+        
+        android.util.Log.d("SimpleDragListener", "=== CENTER-BASED POSITION CALCULATION ===")
+        android.util.Log.d("SimpleDragListener", "Target item bounds: top=$childTop, bottom=$childBottom, centerY=$childCenterY")
+        android.util.Log.d("SimpleDragListener", "Drop coordinates: ($dropX, $dropY)")
+        android.util.Log.d("SimpleDragListener", "Target position: $position")
+        android.util.Log.d("SimpleDragListener", "Is right RecyclerView: $isRightRecyclerView")
+        
+        // Simple center-based logic: if drop is above center, insert before; if below center, insert after
+        val isAboveCenter = dropY < childCenterY
+        
+        android.util.Log.d("SimpleDragListener", "Drop is above center: $isAboveCenter (dropY=$dropY, centerY=$childCenterY)")
+        
+        if (isAboveCenter) {
+            // Dropping above center - insert before this item
+            android.util.Log.d("SimpleDragListener", "Above center - inserting before position: $position")
+            return position
+        } else {
+            // Dropping below center - insert after this item
+            val insertPosition = position + 1
+            
+            // For right RecyclerView, ensure we don't exceed valid positions
+            val finalPosition = if (isRightRecyclerView) {
+                // Right RecyclerView has positions 0, 1, and we allow 2 for the end
+                insertPosition.coerceAtMost(2)
+            } else {
+                // Left RecyclerView can have any position
+                insertPosition
+            }
+            
+            android.util.Log.d("SimpleDragListener", "Below center - inserting after position: $finalPosition (original: $insertPosition)")
+            return finalPosition
         }
     }
 }

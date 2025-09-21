@@ -87,6 +87,18 @@ class UnifiedDataManager {
         rightAdapter?.submitList(allItems.drop(10))
     }
     
+    private fun updateAdaptersWithAnimation() {
+        // Update adapters with slow-motion effect
+        android.util.Log.d("UnifiedDataManager", "Updating adapters with slow-motion animation")
+        
+        // Add a small delay to make the move animation visible
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            leftAdapter?.submitList(allItems.take(10))
+            rightAdapter?.submitList(allItems.drop(10))
+            android.util.Log.d("UnifiedDataManager", "Slow-motion adapter update completed")
+        }, 300) // 300ms delay for slow-motion effect
+    }
+    
     fun getItemAtPosition(recyclerView: RecyclerView, position: Int): Item? {
         val globalPosition = if (recyclerView.id == R.id.left_recycler_view) {
             position
