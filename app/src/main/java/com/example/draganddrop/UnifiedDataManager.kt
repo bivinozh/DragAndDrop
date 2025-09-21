@@ -24,9 +24,13 @@ class UnifiedDataManager {
         val isFromLeft = fromRecyclerView.id == R.id.left_recycler_view
         val isToLeft = toRecyclerView.id == R.id.left_recycler_view
         
+        android.util.Log.d("UnifiedDataManager", "Moving item from ${if (isFromLeft) "left" else "right"} pos $fromPosition to ${if (isToLeft) "left" else "right"} pos $toPosition")
+        
         // Calculate global positions in the unified list
         val globalFromPosition = if (isFromLeft) fromPosition else 10 + fromPosition
         val globalToPosition = if (isToLeft) toPosition else 10 + toPosition
+        
+        android.util.Log.d("UnifiedDataManager", "Global positions: from $globalFromPosition to $globalToPosition")
         
         // Perform the move in the unified list
         if (globalFromPosition != globalToPosition && globalFromPosition < allItems.size) {
@@ -39,9 +43,27 @@ class UnifiedDataManager {
                 globalToPosition
             }
             
-            // Ensure the position is within bounds
-            val finalPosition = adjustedToPosition.coerceIn(0, allItems.size)
+            // Special handling for right RecyclerView last position
+            val finalPosition = if (isToLeft) {
+                // For left RecyclerView, ensure position is within 0-9
+                adjustedToPosition.coerceIn(0, 10)
+            } else {
+                // For right RecyclerView, ensure position is within 10-11
+                val rightPosition = adjustedToPosition - 10
+                val clampedRightPosition = rightPosition.coerceIn(0, 1) // 0 or 1 for right RecyclerView
+                10 + clampedRightPosition
+            }
+            
+            android.util.Log.d("UnifiedDataManager", "Adjusted position: $adjustedToPosition, Final position: $finalPosition, allItems size: ${allItems.size}")
+            
+            // Insert at the calculated position
             allItems.add(finalPosition, item)
+            
+            android.util.Log.d("UnifiedDataManager", "After move - Left items: ${allItems.take(10).map { it.text }}, Right items: ${allItems.drop(10).map { it.text }}")
+        } else if (globalFromPosition == globalToPosition) {
+            android.util.Log.d("UnifiedDataManager", "Same position, no move needed")
+        } else {
+            android.util.Log.d("UnifiedDataManager", "Invalid move: from $globalFromPosition (size: ${allItems.size}) to $globalToPosition")
         }
         
         // Update both adapters with the unified data

@@ -78,13 +78,54 @@ class SimpleDragListener(
         val x = event.x.toInt()
         val y = event.y.toInt()
         
+        android.util.Log.d("SimpleDragListener", "Drop position calculation: x=$x, y=$y, RecyclerView bounds: ${targetRecyclerView.width}x${targetRecyclerView.height}")
+        
         val childView = targetRecyclerView.findChildViewUnder(x.toFloat(), y.toFloat())
-        return if (childView != null) {
+        if (childView != null) {
             val position = targetRecyclerView.getChildAdapterPosition(childView)
-            if (position != RecyclerView.NO_POSITION) position else -1
-        } else {
-            // Drop at the end
-            targetRecyclerView.adapter?.itemCount?.minus(1) ?: -1
+            android.util.Log.d("SimpleDragListener", "Found child view at position: $position")
+            
+            if (position != RecyclerView.NO_POSITION) {
+                // Check if we're dropping in the upper or lower half of the child view
+                val childTop = childView.top
+                val childBottom = childView.bottom
+                val childCenter = childTop + (childBottom - childTop) / 2
+                
+                if (y < childCenter) {
+                    // Dropping in upper half - insert before this item
+                    android.util.Log.d("SimpleDragListener", "Dropping in upper half, position: $position")
+                    return position
+                } else {
+                    // Dropping in lower half - insert after this item
+                    val insertPosition = position + 1
+                    android.util.Log.d("SimpleDragListener", "Dropping in lower half, position: $insertPosition")
+                    return insertPosition
+                }
+            }
         }
+        
+        // Check if we're in the RecyclerView bounds but no child found
+        val adapter = targetRecyclerView.adapter
+        val itemCount = adapter?.itemCount ?: 0
+        
+        if (x >= 0 && x <= targetRecyclerView.width && y >= 0 && y <= targetRecyclerView.height) {
+            // We're within bounds but no child found - this means drop at the end
+            val endPosition = if (itemCount > 0) itemCount else 0
+            
+            // Special handling for right RecyclerView - ensure we can drop at position 1 (last position)
+            val isRightRecyclerView = targetRecyclerView.id == R.id.right_recycler_view
+            val finalPosition = if (isRightRecyclerView && endPosition >= 2) {
+                // For right RecyclerView, max position is 1 (since it only has 2 items)
+                1
+            } else {
+                endPosition
+            }
+            
+            android.util.Log.d("SimpleDragListener", "No child found, dropping at end position: $finalPosition (original: $endPosition, isRight: $isRightRecyclerView)")
+            return finalPosition
+        }
+        
+        android.util.Log.d("SimpleDragListener", "Outside RecyclerView bounds")
+        return -1
     }
 }
