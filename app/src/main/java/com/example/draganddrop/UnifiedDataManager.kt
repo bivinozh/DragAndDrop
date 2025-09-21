@@ -52,17 +52,19 @@ class UnifiedDataManager {
         if (globalFromPosition != globalToPosition) {
             val item = allItems.removeAt(globalFromPosition)
             
-            // Adjust target position if we removed an item before it
-            val adjustedToPosition = if (globalFromPosition < globalToPosition) {
-                globalToPosition - 1
+            // Simplified position calculation
+            val finalPosition = if (globalFromPosition < globalToPosition) {
+                // Moving forward - adjust for the removed item
+                val adjustedPosition = globalToPosition - 1
+                android.util.Log.d("UnifiedDataManager", "Moving forward: $globalFromPosition -> $globalToPosition, adjusted to $adjustedPosition")
+                adjustedPosition.coerceIn(0, allItems.size)
             } else {
-                globalToPosition
+                // Moving backward - no adjustment needed
+                android.util.Log.d("UnifiedDataManager", "Moving backward: $globalFromPosition -> $globalToPosition")
+                globalToPosition.coerceIn(0, allItems.size)
             }
             
-            // Ensure the position is within bounds
-            val finalPosition = adjustedToPosition.coerceIn(0, allItems.size)
-            
-            android.util.Log.d("UnifiedDataManager", "Adjusted position: $adjustedToPosition, Final position: $finalPosition, allItems size: ${allItems.size}")
+            android.util.Log.d("UnifiedDataManager", "Final insertion position: $finalPosition, allItems size: ${allItems.size}")
             
             // Insert at the calculated position
             allItems.add(finalPosition, item)
@@ -134,5 +136,22 @@ class UnifiedDataManager {
         android.util.Log.d("UnifiedDataManager", "Left items (0-9): ${allItems.take(10).mapIndexed { index, item -> "$index:${item.text}" }}")
         android.util.Log.d("UnifiedDataManager", "Right items (10-11): ${allItems.drop(10).mapIndexed { index, item -> "${index + 10}:${item.text}" }}")
         android.util.Log.d("UnifiedDataManager", "=== END DEBUG ===")
+    }
+    
+    fun testPositionMapping() {
+        android.util.Log.d("UnifiedDataManager", "=== POSITION MAPPING TEST ===")
+        android.util.Log.d("UnifiedDataManager", "Left RecyclerView positions:")
+        for (i in 0..9) {
+            val globalPos = i
+            val item = if (globalPos < allItems.size) allItems[globalPos] else null
+            android.util.Log.d("UnifiedDataManager", "  Left pos $i -> Global pos $globalPos -> Item: ${item?.text}")
+        }
+        android.util.Log.d("UnifiedDataManager", "Right RecyclerView positions:")
+        for (i in 0..1) {
+            val globalPos = 10 + i
+            val item = if (globalPos < allItems.size) allItems[globalPos] else null
+            android.util.Log.d("UnifiedDataManager", "  Right pos $i -> Global pos $globalPos -> Item: ${item?.text}")
+        }
+        android.util.Log.d("UnifiedDataManager", "=== END POSITION MAPPING TEST ===")
     }
 }

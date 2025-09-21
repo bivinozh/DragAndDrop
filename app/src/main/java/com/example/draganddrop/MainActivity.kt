@@ -8,8 +8,25 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import android.graphics.Rect
+import android.view.View
 
 class MainActivity : AppCompatActivity() {
+    
+    // Custom ItemDecoration for spacing
+    class ItemSpacingDecoration(private val spacing: Int) : RecyclerView.ItemDecoration() {
+        override fun getItemOffsets(
+            outRect: Rect,
+            view: View,
+            parent: RecyclerView,
+            state: RecyclerView.State
+        ) {
+            outRect.left = spacing
+            outRect.right = spacing
+            outRect.top = spacing
+            outRect.bottom = spacing
+        }
+    }
     
     private lateinit var leftRecyclerView: RecyclerView
     private lateinit var rightRecyclerView: RecyclerView
@@ -54,11 +71,12 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         )
-        leftRecyclerView.apply {
-            layoutManager = GridLayoutManager(this@MainActivity, 2)
-            adapter = leftAdapter
-            setOnDragListener(dragListener)
-        }
+               leftRecyclerView.apply {
+                   layoutManager = GridLayoutManager(this@MainActivity, 2)
+                   adapter = leftAdapter
+                   setOnDragListener(dragListener)
+                   addItemDecoration(ItemSpacingDecoration(8)) // 8dp spacing
+               }
         
         // Setup Right RecyclerView (Linear)
         rightAdapter = ItemAdapter(
@@ -73,11 +91,12 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         )
-        rightRecyclerView.apply {
-            layoutManager = LinearLayoutManager(this@MainActivity, LinearLayoutManager.VERTICAL, false)
-            adapter = rightAdapter
-            setOnDragListener(dragListener)
-        }
+               rightRecyclerView.apply {
+                   layoutManager = LinearLayoutManager(this@MainActivity, LinearLayoutManager.VERTICAL, false)
+                   adapter = rightAdapter
+                   setOnDragListener(dragListener)
+                   addItemDecoration(ItemSpacingDecoration(8)) // 8dp spacing
+               }
         
         // Set up data manager with adapters
         dataManager.setAdapters(leftAdapter, rightAdapter)
@@ -89,7 +108,10 @@ class MainActivity : AppCompatActivity() {
         android.util.Log.d("MainActivity", "Left items: ${dataManager.getLeftItems().map { it.text }}")
         android.util.Log.d("MainActivity", "Right items: ${dataManager.getRightItems().map { it.text }}")
         
-        // Validate data consistency
-        dataManager.validateDataConsistency()
+               // Validate data consistency
+               dataManager.validateDataConsistency()
+               
+               // Test position mapping
+               dataManager.testPositionMapping()
     }
 }
