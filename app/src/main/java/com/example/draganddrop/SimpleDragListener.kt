@@ -66,11 +66,15 @@ class SimpleDragListener(
         draggedFromRecyclerView = fromRecyclerView
         
         android.util.Log.d("SimpleDragListener", "Starting drag: ${item.text} from position $fromPosition")
+        android.util.Log.d("SimpleDragListener", "Current left items: ${dataManager.getLeftItems().map { it.text }}")
+        android.util.Log.d("SimpleDragListener", "Current right items: ${dataManager.getRightItems().map { it.text }}")
         
         val viewHolder = fromRecyclerView.findViewHolderForAdapterPosition(fromPosition)
         if (viewHolder != null) {
             val dragShadowBuilder = View.DragShadowBuilder(viewHolder.itemView)
             viewHolder.itemView.startDrag(null, dragShadowBuilder, null, 0)
+        } else {
+            android.util.Log.e("SimpleDragListener", "ViewHolder not found for position $fromPosition")
         }
     }
 
@@ -91,6 +95,8 @@ class SimpleDragListener(
                 val childBottom = childView.bottom
                 val childCenter = childTop + (childBottom - childTop) / 2
                 
+                val isRightRecyclerView = targetRecyclerView.id == R.id.right_recycler_view
+                
                 if (y < childCenter) {
                     // Dropping in upper half - insert before this item
                     android.util.Log.d("SimpleDragListener", "Dropping in upper half, position: $position")
@@ -98,8 +104,18 @@ class SimpleDragListener(
                 } else {
                     // Dropping in lower half - insert after this item
                     val insertPosition = position + 1
-                    android.util.Log.d("SimpleDragListener", "Dropping in lower half, position: $insertPosition")
-                    return insertPosition
+                    
+                    // For right RecyclerView, we have 2 items (positions 0 and 1)
+                    // If we're dropping after position 1, we want to insert at position 2 (which becomes global position 12)
+                    val finalPosition = if (isRightRecyclerView) {
+                        // Allow position 2 for the right RecyclerView (this will be global position 12)
+                        insertPosition.coerceAtMost(2)
+                    } else {
+                        insertPosition
+                    }
+                    
+                    android.util.Log.d("SimpleDragListener", "Dropping in lower half, position: $finalPosition (original: $insertPosition, isRight: $isRightRecyclerView)")
+                    return finalPosition
                 }
             }
         }
@@ -112,11 +128,12 @@ class SimpleDragListener(
             // We're within bounds but no child found - this means drop at the end
             val endPosition = if (itemCount > 0) itemCount else 0
             
-            // Special handling for right RecyclerView - ensure we can drop at position 1 (last position)
+            // Special handling for right RecyclerView
             val isRightRecyclerView = targetRecyclerView.id == R.id.right_recycler_view
-            val finalPosition = if (isRightRecyclerView && endPosition >= 2) {
-                // For right RecyclerView, max position is 1 (since it only has 2 items)
-                1
+            val finalPosition = if (isRightRecyclerView) {
+                // For right RecyclerView, we have 2 items (positions 0 and 1)
+                // If we're dropping in empty space, it means we want the last position (2, which becomes global 12)
+                if (endPosition >= 2) 2 else endPosition
             } else {
                 endPosition
             }

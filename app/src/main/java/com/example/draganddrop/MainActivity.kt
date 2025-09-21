@@ -88,5 +88,8 @@ class MainActivity : AppCompatActivity() {
         android.util.Log.d("MainActivity", "Right items count: ${dataManager.getRightItems().size}")
         android.util.Log.d("MainActivity", "Left items: ${dataManager.getLeftItems().map { it.text }}")
         android.util.Log.d("MainActivity", "Right items: ${dataManager.getRightItems().map { it.text }}")
+        
+        // Validate data consistency
+        dataManager.validateDataConsistency()
     }
 }
