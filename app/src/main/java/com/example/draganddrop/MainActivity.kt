@@ -71,12 +71,13 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         )
-               leftRecyclerView.apply {
-                   layoutManager = GridLayoutManager(this@MainActivity, 2)
-                   adapter = leftAdapter
-                   setOnDragListener(dragListener)
-                   addItemDecoration(ItemSpacingDecoration(8)) // 8dp spacing
-               }
+        
+        leftRecyclerView.apply {
+            layoutManager = GridLayoutManager(this@MainActivity, 2)
+            adapter = leftAdapter
+            setOnDragListener(dragListener)
+            addItemDecoration(ItemSpacingDecoration(8))
+        }
         
         // Setup Right RecyclerView (Linear)
         rightAdapter = ItemAdapter(
@@ -91,27 +92,18 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         )
-               rightRecyclerView.apply {
-                   layoutManager = LinearLayoutManager(this@MainActivity, LinearLayoutManager.VERTICAL, false)
-                   adapter = rightAdapter
-                   setOnDragListener(dragListener)
-                   addItemDecoration(ItemSpacingDecoration(8)) // 8dp spacing
-               }
+        
+        rightRecyclerView.apply {
+            layoutManager = LinearLayoutManager(this@MainActivity, LinearLayoutManager.VERTICAL, false)
+            adapter = rightAdapter
+            setOnDragListener(dragListener)
+            addItemDecoration(ItemSpacingDecoration(8))
+        }
         
         // Set up data manager with adapters
         dataManager.setAdapters(leftAdapter, rightAdapter)
         
         // Log initial data
-        android.util.Log.d("MainActivity", "Unified data count: ${dataManager.getAllItems().size}")
-        android.util.Log.d("MainActivity", "Left items count: ${dataManager.getLeftItems().size}")
-        android.util.Log.d("MainActivity", "Right items count: ${dataManager.getRightItems().size}")
-        android.util.Log.d("MainActivity", "Left items: ${dataManager.getLeftItems().map { it.text }}")
-        android.util.Log.d("MainActivity", "Right items: ${dataManager.getRightItems().map { it.text }}")
-        
-               // Validate data consistency
-               dataManager.validateDataConsistency()
-               
-               // Test position mapping
-               dataManager.testPositionMapping()
+        android.util.Log.d("MainActivity", "Setup complete - Left: ${dataManager.getLeftItems().size} items, Right: ${dataManager.getRightItems().size} items")
     }
 }

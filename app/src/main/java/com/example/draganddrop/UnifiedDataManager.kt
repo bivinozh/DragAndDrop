@@ -76,9 +76,6 @@ class UnifiedDataManager {
         
         // Update both adapters with the unified data
         updateAdapters()
-        
-        // Debug the final state
-        debugCurrentState()
     }
     
     private fun updateAdapters() {
@@ -123,47 +120,4 @@ class UnifiedDataManager {
         }
     }
     
-    fun validateDataConsistency() {
-        android.util.Log.d("UnifiedDataManager", "Validating data consistency...")
-        android.util.Log.d("UnifiedDataManager", "Total items: ${allItems.size}")
-        android.util.Log.d("UnifiedDataManager", "Left items count: ${allItems.take(10).size}")
-        android.util.Log.d("UnifiedDataManager", "Right items count: ${allItems.drop(10).size}")
-        
-        if (allItems.size != 12) {
-            android.util.Log.e("UnifiedDataManager", "Data inconsistency: Expected 12 items, got ${allItems.size}")
-        }
-        
-        if (allItems.take(10).size != 10) {
-            android.util.Log.e("UnifiedDataManager", "Left RecyclerView inconsistency: Expected 10 items, got ${allItems.take(10).size}")
-        }
-        
-        if (allItems.drop(10).size != 2) {
-            android.util.Log.e("UnifiedDataManager", "Right RecyclerView inconsistency: Expected 2 items, got ${allItems.drop(10).size}")
-        }
-    }
-    
-    fun debugCurrentState() {
-        android.util.Log.d("UnifiedDataManager", "=== CURRENT STATE DEBUG ===")
-        android.util.Log.d("UnifiedDataManager", "All items: ${allItems.mapIndexed { index, item -> "$index:${item.text}" }}")
-        android.util.Log.d("UnifiedDataManager", "Left items (0-9): ${allItems.take(10).mapIndexed { index, item -> "$index:${item.text}" }}")
-        android.util.Log.d("UnifiedDataManager", "Right items (10-11): ${allItems.drop(10).mapIndexed { index, item -> "${index + 10}:${item.text}" }}")
-        android.util.Log.d("UnifiedDataManager", "=== END DEBUG ===")
-    }
-    
-    fun testPositionMapping() {
-        android.util.Log.d("UnifiedDataManager", "=== POSITION MAPPING TEST ===")
-        android.util.Log.d("UnifiedDataManager", "Left RecyclerView positions:")
-        for (i in 0..9) {
-            val globalPos = i
-            val item = if (globalPos < allItems.size) allItems[globalPos] else null
-            android.util.Log.d("UnifiedDataManager", "  Left pos $i -> Global pos $globalPos -> Item: ${item?.text}")
-        }
-        android.util.Log.d("UnifiedDataManager", "Right RecyclerView positions:")
-        for (i in 0..1) {
-            val globalPos = 10 + i
-            val item = if (globalPos < allItems.size) allItems[globalPos] else null
-            android.util.Log.d("UnifiedDataManager", "  Right pos $i -> Global pos $globalPos -> Item: ${item?.text}")
-        }
-        android.util.Log.d("UnifiedDataManager", "=== END POSITION MAPPING TEST ===")
-    }
 }

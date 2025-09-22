@@ -38,19 +38,15 @@ class SimpleDragListener(
     private val SLOW_MOTION_INTERPOLATOR = DecelerateInterpolator(2.0f)
 
     override fun onDrag(view: View, event: DragEvent): Boolean {
-        android.util.Log.d("SimpleDragListener", "onDrag called: action=${event.action}, view=${view.id}")
         when (event.action) {
             DragEvent.ACTION_DRAG_STARTED -> {
-                android.util.Log.d("SimpleDragListener", "Drag started on view: ${view.id}")
                 return true
             }
             DragEvent.ACTION_DRAG_ENTERED -> {
-                android.util.Log.d("SimpleDragListener", "Drag entered: ${view.id}")
                 view.alpha = 0.7f
                 return true
             }
             DragEvent.ACTION_DRAG_EXITED -> {
-                android.util.Log.d("SimpleDragListener", "Drag exited: ${view.id}")
                 view.alpha = 1.0f
                 clearTargetFocus()
                 return true
@@ -64,51 +60,23 @@ class SimpleDragListener(
                 return true
             }
             DragEvent.ACTION_DROP -> {
-                android.util.Log.d("SimpleDragListener", "=== ACTION_DROP ===")
-                android.util.Log.d("SimpleDragListener", "Drop on: ${view.id}")
-                android.util.Log.d("SimpleDragListener", "Dragged item: ${draggedItem?.text}")
-                android.util.Log.d("SimpleDragListener", "Dragged from position: $draggedFromPosition")
-                android.util.Log.d("SimpleDragListener", "Dragged from RecyclerView: ${draggedFromRecyclerView?.id}")
                 view.alpha = 1.0f
                 
                 val targetRecyclerView = view as RecyclerView
                 val targetPosition = getDropPosition(targetRecyclerView, event)
                 
-                android.util.Log.d("SimpleDragListener", "Calculated target position: $targetPosition")
-                android.util.Log.d("SimpleDragListener", "Dragged from position: $draggedFromPosition")
-                android.util.Log.d("SimpleDragListener", "From RecyclerView ID: ${draggedFromRecyclerView?.id}")
-                android.util.Log.d("SimpleDragListener", "To RecyclerView ID: ${targetRecyclerView.id}")
-                
                 if (targetPosition >= 0 && draggedFromRecyclerView != null) {
-                    val fromRecycler = draggedFromRecyclerView!!
-                    android.util.Log.d("SimpleDragListener", "=== EXECUTING MOVE ===")
-                    android.util.Log.d("SimpleDragListener", "From: ${if (fromRecycler.id == R.id.left_recycler_view) "LEFT" else "RIGHT"} pos $draggedFromPosition")
-                    android.util.Log.d("SimpleDragListener", "To: ${if (targetRecyclerView.id == R.id.left_recycler_view) "LEFT" else "RIGHT"} pos $targetPosition")
-                    
-                    // Execute move immediately but with visual feedback
-                    android.util.Log.d("SimpleDragListener", "Executing move with visual feedback")
-                    
-                    // Show move in progress visual feedback
                     showMoveInProgress(targetRecyclerView, targetPosition)
-                    
-                    // Execute the move
                     dataManager.moveItem(
-                        fromRecycler,
+                        draggedFromRecyclerView!!,
                         draggedFromPosition,
                         targetRecyclerView,
                         targetPosition
                     )
-                } else {
-                    if (targetPosition == -1) {
-                        android.util.Log.d("SimpleDragListener", "Drop rejected: Insufficient coverage (need 90%)")
-                    } else {
-                        android.util.Log.e("SimpleDragListener", "Invalid drop: targetPosition=$targetPosition, draggedFromRecyclerView=$draggedFromRecyclerView")
-                    }
                 }
                 return true
             }
             DragEvent.ACTION_DRAG_ENDED -> {
-                android.util.Log.d("SimpleDragListener", "Drag ended")
                 view.alpha = 1.0f
                 clearTargetFocus()
                 draggedItem = null
@@ -126,17 +94,11 @@ class SimpleDragListener(
         draggedFromPosition = fromPosition
         draggedFromRecyclerView = fromRecyclerView
         
-        android.util.Log.d("SimpleDragListener", "Starting drag: ${item.text} from position $fromPosition")
-        android.util.Log.d("SimpleDragListener", "Current left items: ${dataManager.getLeftItems().map { it.text }}")
-        android.util.Log.d("SimpleDragListener", "Current right items: ${dataManager.getRightItems().map { it.text }}")
-        
         val viewHolder = fromRecyclerView.findViewHolderForAdapterPosition(fromPosition)
         if (viewHolder != null) {
             draggedItemView = viewHolder.itemView
             val dragShadowBuilder = View.DragShadowBuilder(viewHolder.itemView)
             viewHolder.itemView.startDrag(null, dragShadowBuilder, null, 0)
-        } else {
-            android.util.Log.e("SimpleDragListener", "ViewHolder not found for position $fromPosition")
         }
     }
 
@@ -144,124 +106,25 @@ class SimpleDragListener(
         val x = event.x.toInt()
         val y = event.y.toInt()
         
-        android.util.Log.d("SimpleDragListener", "=== DROP POSITION CALCULATION ===")
-        android.util.Log.d("SimpleDragListener", "Drop coordinates: x=$x, y=$y")
-        android.util.Log.d("SimpleDragListener", "RecyclerView bounds: ${targetRecyclerView.width}x${targetRecyclerView.height}")
-        android.util.Log.d("SimpleDragListener", "RecyclerView ID: ${targetRecyclerView.id}")
-        android.util.Log.d("SimpleDragListener", "Adapter item count: ${targetRecyclerView.adapter?.itemCount}")
-        android.util.Log.d("SimpleDragListener", "Is right RecyclerView: ${targetRecyclerView.id == R.id.right_recycler_view}")
-        
         val childView = targetRecyclerView.findChildViewUnder(x.toFloat(), y.toFloat())
         if (childView != null) {
             val position = targetRecyclerView.getChildAdapterPosition(childView)
-            android.util.Log.d("SimpleDragListener", "Found child view at position: $position")
-            
             if (position != RecyclerView.NO_POSITION && position >= 0) {
-                // Calculate drop position based on center of target item
-                val dropPosition = calculateCenterBasedPosition(childView, position, targetRecyclerView, x, y)
-                android.util.Log.d("SimpleDragListener", "Center-based drop position: $dropPosition")
-                return dropPosition
-            } else {
-                // Found child view but invalid position - treat as empty space
-                android.util.Log.d("SimpleDragListener", "Found child view but invalid position: $position, treating as empty space")
+                return calculateCenterBasedPosition(childView, position, targetRecyclerView, x, y)
             }
         }
         
-        // Check if we're in the RecyclerView bounds but no child found
-        val adapter = targetRecyclerView.adapter
-        val itemCount = adapter?.itemCount ?: 0
-        
-        if (x >= 0 && x <= targetRecyclerView.width && y >= 0 && y <= targetRecyclerView.height) {
-            // We're within bounds but no child found - this means drop at the end
-            val isRightRecyclerView = targetRecyclerView.id == R.id.right_recycler_view
-            
-            val finalPosition = if (isRightRecyclerView) {
-                // For right RecyclerView, drop at the end (position 2 = global position 12)
-                android.util.Log.d("SimpleDragListener", "Right RecyclerView empty space drop - using position 2")
-                2
-            } else {
-                // For left RecyclerView, drop at the end
-                val endPosition = if (itemCount > 0) itemCount else 0
-                android.util.Log.d("SimpleDragListener", "Left RecyclerView empty space drop - using position $endPosition")
-                endPosition
-            }
-            
-            android.util.Log.d("SimpleDragListener", "No child found, dropping at end position: $finalPosition (isRight: $isRightRecyclerView)")
-            return finalPosition
-        }
-        
-        android.util.Log.d("SimpleDragListener", "Outside RecyclerView bounds")
-        
-        // Safety fallback - if we're outside bounds, try to drop at the end
-        val fallbackAdapter = targetRecyclerView.adapter
-        val fallbackItemCount = fallbackAdapter?.itemCount ?: 0
+        // Drop at the end if no child found
+        val itemCount = targetRecyclerView.adapter?.itemCount ?: 0
         val isRightRecyclerView = targetRecyclerView.id == R.id.right_recycler_view
-        val fallbackPosition = if (isRightRecyclerView) {
-            fallbackItemCount.coerceAtMost(2)
+        
+        return if (isRightRecyclerView) {
+            itemCount.coerceAtMost(2)
         } else {
-            fallbackItemCount
+            itemCount
         }
-        
-        android.util.Log.d("SimpleDragListener", "Using fallback position: $fallbackPosition")
-        return fallbackPosition
     }
     
-    // Emergency fallback - this should never be reached, but ensures we never return -1
-    private fun getEmergencyFallbackPosition(targetRecyclerView: RecyclerView): Int {
-        val isRightRecyclerView = targetRecyclerView.id == R.id.right_recycler_view
-        return if (isRightRecyclerView) 0 else 0  // Always return 0 as last resort
-    }
-    
-    private fun calculateCoveragePercentage(draggedView: View?, targetView: View, dropX: Int, dropY: Int): Float {
-        if (draggedView == null) return 0f
-        
-        // Get the dragged item's dimensions
-        val draggedWidth = draggedView.width
-        val draggedHeight = draggedView.height
-        
-        // Get the target item's bounds
-        val targetLeft = targetView.left
-        val targetTop = targetView.top
-        val targetRight = targetView.right
-        val targetBottom = targetView.bottom
-        
-        // Calculate the dragged item's bounds at the drop position
-        val draggedLeft = dropX - (draggedWidth / 2)
-        val draggedTop = dropY - (draggedHeight / 2)
-        val draggedRight = dropX + (draggedWidth / 2)
-        val draggedBottom = dropY + (draggedHeight / 2)
-        
-        // Calculate intersection area
-        val intersectionLeft = maxOf(draggedLeft, targetLeft)
-        val intersectionTop = maxOf(draggedTop, targetTop)
-        val intersectionRight = minOf(draggedRight, targetRight)
-        val intersectionBottom = minOf(draggedBottom, targetBottom)
-        
-        // Check if there's any intersection
-        if (intersectionLeft >= intersectionRight || intersectionTop >= intersectionBottom) {
-            return 0f
-        }
-        
-        val intersectionArea = (intersectionRight - intersectionLeft) * (intersectionBottom - intersectionTop)
-        val draggedArea = draggedWidth * draggedHeight
-        val coveragePercentage = intersectionArea.toFloat() / draggedArea.toFloat()
-        
-        android.util.Log.d("SimpleDragListener", "Coverage calculation:")
-        android.util.Log.d("SimpleDragListener", "  Dragged bounds: ($draggedLeft, $draggedTop, $draggedRight, $draggedBottom)")
-        android.util.Log.d("SimpleDragListener", "  Target bounds: ($targetLeft, $targetTop, $targetRight, $targetBottom)")
-        android.util.Log.d("SimpleDragListener", "  Intersection: ($intersectionLeft, $intersectionTop, $intersectionRight, $intersectionBottom)")
-        android.util.Log.d("SimpleDragListener", "  Coverage: ${(coveragePercentage * 100).toInt()}%")
-        
-        return coveragePercentage
-    }
-    
-    private fun isCoverageSufficient(draggedView: View?, targetView: View, dropX: Int, dropY: Int): Boolean {
-        val coverage = calculateCoveragePercentage(draggedView, targetView, dropX, dropY)
-        val isSufficient = coverage >= COVERAGE_THRESHOLD
-        
-        android.util.Log.d("SimpleDragListener", "Coverage sufficient: $isSufficient (${(coverage * 100).toInt()}% >= ${(COVERAGE_THRESHOLD * 100).toInt()}%)")
-        return isSufficient
-    }
     
     private fun setTargetFocus(targetView: View?, targetPosition: Int, targetRecyclerView: RecyclerView?) {
         // Clear previous focus
