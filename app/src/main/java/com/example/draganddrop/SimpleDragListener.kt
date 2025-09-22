@@ -17,6 +17,7 @@ class SimpleDragListener(
     private val rightRecyclerView: RecyclerView
 ) : View.OnDragListener {
 
+
     private var draggedItem: Item? = null
     private var draggedFromPosition = -1
     private var draggedFromRecyclerView: RecyclerView? = null
