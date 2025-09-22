@@ -71,8 +71,10 @@ class MainActivity : AppCompatActivity() {
             onItemLongClick = { item -> 
                 android.util.Log.d("MainActivity", "Left item long clicked: ${item.text}")
                 val position = viewModel.leftItems.value?.indexOf(item) ?: -1
-                if (position != -1) {
+                if (position != -1 && item.isDraggable) {
                     dragListener.startDrag(item, leftRecyclerView, position)
+                } else if (!item.isDraggable) {
+                    Toast.makeText(this, "Item ${item.text} cannot be dragged", Toast.LENGTH_SHORT).show()
                 }
             }
         )
@@ -92,8 +94,10 @@ class MainActivity : AppCompatActivity() {
             onItemLongClick = { item -> 
                 android.util.Log.d("MainActivity", "Right item long clicked: ${item.text}")
                 val position = viewModel.rightItems.value?.indexOf(item) ?: -1
-                if (position != -1) {
+                if (position != -1 && item.isDraggable) {
                     dragListener.startDrag(item, rightRecyclerView, position)
+                } else if (!item.isDraggable) {
+                    Toast.makeText(this, "Item ${item.text} cannot be dragged", Toast.LENGTH_SHORT).show()
                 }
             }
         )

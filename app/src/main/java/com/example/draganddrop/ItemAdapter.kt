@@ -28,13 +28,37 @@ class ItemAdapter(
         holder.textView.text = item.text
         holder.textView.setBackgroundColor(item.color)
         
+        // Visual indication for non-draggable items
+        if (!item.isDraggable) {
+            holder.itemView.alpha = 0.6f
+            holder.textView.text = "${item.text} (Locked)"
+        } else {
+            holder.itemView.alpha = 1.0f
+        }
+        
         holder.itemView.setOnClickListener {
             onItemClick(item)
         }
         
+        // Only allow long click for draggable items
         holder.itemView.setOnLongClickListener {
-            onItemLongClick(item)
-            true
+            if (item.isDraggable) {
+                onItemLongClick(item)
+                true
+            } else {
+                false // Prevent long click for non-draggable items
+            }
+        }
+    }
+
+    /**
+     * Public method to get item at specific position
+     */
+    fun getItemAt(position: Int): Item? {
+        return if (position >= 0 && position < itemCount) {
+            getItem(position)
+        } else {
+            null
         }
     }
 

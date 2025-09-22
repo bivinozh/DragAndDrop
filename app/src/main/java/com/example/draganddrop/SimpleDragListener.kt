@@ -68,6 +68,13 @@ class SimpleDragListener(
                 val targetPosition = getDropPosition(targetRecyclerView, event)
                 
                 if (targetPosition >= 0 && draggedFromRecyclerView != null) {
+                    // Check if target position contains a locked item
+                    val targetItem = getItemAtPosition(targetRecyclerView, targetPosition)
+                    if (targetItem != null && !targetItem.isDraggable) {
+                        android.util.Log.w("SimpleDragListener", "Cannot drop on locked item: ${targetItem.text}")
+                        return true // Drop rejected
+                    }
+                    
                     showMoveInProgress(targetRecyclerView, targetPosition)
                     
                     // Determine RecyclerView types
@@ -102,6 +109,12 @@ class SimpleDragListener(
     }
 
     fun startDrag(item: Item, fromRecyclerView: RecyclerView, fromPosition: Int) {
+        // Double-check that the item is draggable
+        if (!item.isDraggable) {
+            android.util.Log.w("SimpleDragListener", "Attempted to drag non-draggable item: ${item.text}")
+            return
+        }
+        
         draggedItem = item
         draggedFromPosition = fromPosition
         draggedFromRecyclerView = fromRecyclerView
@@ -135,6 +148,11 @@ class SimpleDragListener(
         } else {
             itemCount
         }
+    }
+    
+    private fun getItemAtPosition(recyclerView: RecyclerView, position: Int): Item? {
+        val adapter = recyclerView.adapter as? ItemAdapter
+        return adapter?.getItemAt(position)
     }
     
     
