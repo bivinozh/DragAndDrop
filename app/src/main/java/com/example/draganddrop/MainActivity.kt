@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import android.graphics.Rect
 import android.view.View
+import android.widget.Button
 import android.widget.Toast
 import com.example.draganddrop.viewmodel.DragDropViewModel
 import com.example.draganddrop.repository.ItemRepository
@@ -53,6 +54,7 @@ class MainActivity : AppCompatActivity() {
         }
         
         setupRecyclerViews()
+        setupButtons()
         setupViewModelObservers()
     }
     
@@ -133,5 +135,51 @@ class MainActivity : AppCompatActivity() {
             // You can show/hide loading indicators here if needed
             android.util.Log.d("MainActivity", "Loading state: $isLoading")
         }
+    }
+    
+    private fun setupButtons() {
+        val resetButton = findViewById<Button>(R.id.reset_button)
+        val logButton = findViewById<Button>(R.id.log_button)
+        
+        resetButton.setOnClickListener {
+            viewModel.resetData()
+            Toast.makeText(this, "List reset to initial state", Toast.LENGTH_SHORT).show()
+        }
+        
+        logButton.setOnClickListener {
+            logCurrentArrayOrder()
+        }
+    }
+    
+    private fun logCurrentArrayOrder() {
+        val allItems = viewModel.getAllItems()
+        val leftItems = viewModel.leftItems.value ?: emptyList()
+        val rightItems = viewModel.rightItems.value ?: emptyList()
+        
+        val logMessage = buildString {
+            appendLine("=== CURRENT ARRAY ORDER ===")
+            appendLine("Total Items: ${allItems.size}")
+            appendLine()
+            appendLine("Left RecyclerView (${leftItems.size} items):")
+            leftItems.forEachIndexed { index, item ->
+                val status = if (item.isDraggable) "Draggable" else "Locked"
+                appendLine("  [$index] ${item.text} ($status)")
+            }
+            appendLine()
+            appendLine("Right RecyclerView (${rightItems.size} items):")
+            rightItems.forEachIndexed { index, item ->
+                val status = if (item.isDraggable) "Draggable" else "Locked"
+                appendLine("  [$index] ${item.text} ($status)")
+            }
+            appendLine()
+            appendLine("Global Array Order:")
+            allItems.forEachIndexed { index, item ->
+                val status = if (item.isDraggable) "Draggable" else "Locked"
+                appendLine("  [$index] ${item.text} ($status)")
+            }
+        }
+        
+        android.util.Log.d("MainActivity", logMessage)
+        Toast.makeText(this, "Array order logged to console", Toast.LENGTH_SHORT).show()
     }
 }

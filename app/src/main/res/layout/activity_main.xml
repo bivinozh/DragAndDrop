@@ -100,12 +100,51 @@
                 android:layout_width="0dp"
                 android:layout_height="0dp"
                 android:layout_marginStart="8dp"
+                android:layout_marginBottom="8dp"
                 android:padding="8dp"
                 android:background="@drawable/recycler_background"
                 app:layout_constraintTop_toBottomOf="@id/right_section_label"
                 app:layout_constraintStart_toEndOf="@id/connector_line"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent" />
+                app:layout_constraintBottom_toTopOf="@id/right_buttons_container" />
+
+            <!-- Right side buttons container -->
+            <LinearLayout
+                android:id="@+id/right_buttons_container"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginBottom="8dp"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:padding="8dp"
+                app:layout_constraintStart_toEndOf="@id/connector_line"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent">
+
+                <!-- Reset Button -->
+                <Button
+                    android:id="@+id/reset_button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    android:text="Reset"
+                    android:textSize="12sp"
+                    android:backgroundTint="#FF5722" />
+
+                <!-- Log Button -->
+                <Button
+                    android:id="@+id/log_button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:text="Log Order"
+                    android:textSize="12sp"
+                    android:backgroundTint="#2196F3" />
+
+            </LinearLayout>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
