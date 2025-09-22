@@ -75,6 +75,7 @@ class CrossRecyclerViewTouchHelper(
                     
                     android.util.Log.d("CrossRecyclerViewTouchHelper", "=== DRAG STARTED ===")
                     android.util.Log.d("CrossRecyclerViewTouchHelper", "Position: $position, RecyclerView: ${recyclerView.id}")
+                    android.util.Log.d("CrossRecyclerViewTouchHelper", "ViewHolder: ${viewHolder.itemView}")
                     
                     // Check if the item is draggable
                     if (adapter != null && position != RecyclerView.NO_POSITION) {
@@ -84,17 +85,25 @@ class CrossRecyclerViewTouchHelper(
                             android.util.Log.d("CrossRecyclerViewTouchHelper", "Drag blocked - item is non-draggable: ${item.text}")
                             return
                         }
+                    } else {
+                        android.util.Log.e("CrossRecyclerViewTouchHelper", "Invalid adapter or position during drag start")
+                        return
                     }
                     
                     draggedFromPosition = position
                     draggedFromRecyclerView = recyclerView
                     it.itemView.alpha = 0.7f
                     it.itemView.elevation = 8f
-                    android.util.Log.d("CrossRecyclerViewTouchHelper", "Drag state initialized - position: $draggedFromPosition")
+                    android.util.Log.d("CrossRecyclerViewTouchHelper", "Drag state initialized successfully")
+                    android.util.Log.d("CrossRecyclerViewTouchHelper", "  - From Position: $draggedFromPosition")
+                    android.util.Log.d("CrossRecyclerViewTouchHelper", "  - From RecyclerView: ${draggedFromRecyclerView?.id}")
+                    android.util.Log.d("CrossRecyclerViewTouchHelper", "  - Item: ${adapter.getItemAt(position)?.text}")
                 }
             }
             ItemTouchHelper.ACTION_STATE_IDLE -> {
                 android.util.Log.d("CrossRecyclerViewTouchHelper", "=== DRAG ENDED ===")
+                android.util.Log.d("CrossRecyclerViewTouchHelper", "Final drag position: $draggedFromPosition")
+                android.util.Log.d("CrossRecyclerViewTouchHelper", "Final drag RecyclerView: ${draggedFromRecyclerView?.id}")
                 android.util.Log.d("CrossRecyclerViewTouchHelper", "Resetting drag state")
                 draggedFromPosition = -1
                 draggedFromRecyclerView = null
