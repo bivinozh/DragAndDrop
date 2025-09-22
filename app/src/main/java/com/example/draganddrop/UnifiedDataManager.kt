@@ -36,9 +36,18 @@ class UnifiedDataManager {
         toRecyclerView: RecyclerView,
         toPosition: Int
     ) {
+        android.util.Log.d("UnifiedDataManager", "=== MOVE ITEM CALLED ===")
+        android.util.Log.d("UnifiedDataManager", "From position: $fromPosition, To position: $toPosition")
+        android.util.Log.d("UnifiedDataManager", "From RecyclerView: ${fromRecyclerView.id}, To RecyclerView: ${toRecyclerView.id}")
+        
         val (fromList, toList, fromAdapter, toAdapter) = getListAndAdapter(fromRecyclerView, toRecyclerView)
         
         if (fromList != null && toList != null && fromAdapter != null && toAdapter != null) {
+            android.util.Log.d("UnifiedDataManager", "Lists and adapters found successfully")
+            android.util.Log.d("UnifiedDataManager", "From list size: ${fromList.size}, To list size: ${toList.size}")
+            android.util.Log.d("UnifiedDataManager", "From list items: ${fromList.map { it.text }}")
+            android.util.Log.d("UnifiedDataManager", "To list items: ${toList.map { it.text }}")
+            
             // Validate positions are within bounds
             if (fromPosition < 0 || fromPosition >= fromList.size) {
                 android.util.Log.e("UnifiedDataManager", "Invalid fromPosition: $fromPosition, list size: ${fromList.size}")
@@ -50,27 +59,63 @@ class UnifiedDataManager {
                 return
             }
             
-            val item = fromList.removeAt(fromPosition)
+            // Get the items before replacement
+            val draggedItem = fromList[fromPosition]
+            val targetItem = toList[toPosition]
+            android.util.Log.d("UnifiedDataManager", "Before replacement:")
+            android.util.Log.d("UnifiedDataManager", "  Dragged item: ${draggedItem.text} (from position $fromPosition)")
+            android.util.Log.d("UnifiedDataManager", "  Target item: ${targetItem.text} (at position $toPosition)")
             
-            // Adjust toPosition if moving within the same list
-            val adjustedToPosition = if (fromList == toList && toPosition > fromPosition) {
-                toPosition - 1
-            } else {
-                toPosition
-            }
+            // Perform item swap/replacement
+            android.util.Log.d("UnifiedDataManager", "Calling swapItems...")
+            swapItems(fromList, fromPosition, toList, toPosition)
             
-            // Ensure adjusted position is still valid
-            if (adjustedToPosition >= 0 && adjustedToPosition <= toList.size) {
-                toList.add(adjustedToPosition, item)
-                updateAdapters()
-                android.util.Log.d("UnifiedDataManager", "Item moved from position $fromPosition to $adjustedToPosition")
-            } else {
-                // If invalid, put item back
-                fromList.add(fromPosition, item)
-                android.util.Log.e("UnifiedDataManager", "Invalid adjusted position: $adjustedToPosition")
-            }
+            android.util.Log.d("UnifiedDataManager", "Calling updateAdapters...")
+            updateAdapters()
+            
+            android.util.Log.d("UnifiedDataManager", "=== REPLACEMENT COMPLETED ===")
+            android.util.Log.d("UnifiedDataManager", "After replacement:")
+            android.util.Log.d("UnifiedDataManager", "  From list items: ${fromList.map { it.text }}")
+            android.util.Log.d("UnifiedDataManager", "  To list items: ${toList.map { it.text }}")
+        } else {
+            android.util.Log.e("UnifiedDataManager", "moveItem: Invalid lists or adapters")
+            android.util.Log.e("UnifiedDataManager", "FromList: ${fromList != null}, ToList: ${toList != null}, FromAdapter: ${fromAdapter != null}, ToAdapter: ${toAdapter != null}")
         }
     }
+    
+    /**
+     * Swaps items between two lists, replacing the target item with the dragged item
+     */
+    private fun swapItems(fromList: MutableList<Item>, fromPosition: Int, toList: MutableList<Item>, toPosition: Int) {
+        val draggedItem = fromList[fromPosition]
+        val targetItem = toList[toPosition]
+        
+        android.util.Log.d("UnifiedDataManager", "=== SWAP ITEMS START ===")
+        android.util.Log.d("UnifiedDataManager", "Dragged item: ${draggedItem.text} from position $fromPosition")
+        android.util.Log.d("UnifiedDataManager", "Target item: ${targetItem.text} at position $toPosition")
+        android.util.Log.d("UnifiedDataManager", "FromList size: ${fromList.size}, ToList size: ${toList.size}")
+        android.util.Log.d("UnifiedDataManager", "FromList: ${fromList.mapIndexed { i, item -> "$i:${item.text}" }}")
+        android.util.Log.d("UnifiedDataManager", "ToList: ${toList.mapIndexed { i, item -> "$i:${item.text}" }}")
+        
+        if (fromList == toList) {
+            // Same list - swap positions
+            android.util.Log.d("UnifiedDataManager", "Same list swap - swapping positions $fromPosition and $toPosition")
+            fromList[fromPosition] = targetItem
+            fromList[toPosition] = draggedItem
+            android.util.Log.d("UnifiedDataManager", "Items swapped within same list: ${draggedItem.text} ↔ ${targetItem.text}")
+        } else {
+            // Different lists - replace target with dragged item
+            android.util.Log.d("UnifiedDataManager", "Cross-list replacement - moving ${draggedItem.text} to replace ${targetItem.text}")
+            fromList.removeAt(fromPosition)
+            toList[toPosition] = draggedItem
+            android.util.Log.d("UnifiedDataManager", "Item replaced across lists: ${draggedItem.text} replaces ${targetItem.text}")
+        }
+        
+        android.util.Log.d("UnifiedDataManager", "After swap - FromList: ${fromList.mapIndexed { i, item -> "$i:${item.text}" }}")
+        android.util.Log.d("UnifiedDataManager", "After swap - ToList: ${toList.mapIndexed { i, item -> "$i:${item.text}" }}")
+        android.util.Log.d("UnifiedDataManager", "=== SWAP ITEMS END ===")
+    }
+    
     
     private fun getListAndAdapter(
         fromRecyclerView: RecyclerView,
@@ -85,8 +130,25 @@ class UnifiedDataManager {
     }
     
     private fun updateAdapters() {
-        leftAdapter?.submitList(getLeftItems())
-        rightAdapter?.submitList(getRightItems())
+        android.util.Log.d("UnifiedDataManager", "=== UPDATING ADAPTERS ===")
+        android.util.Log.d("UnifiedDataManager", "Left items: ${leftItems.map { it.text }}")
+        android.util.Log.d("UnifiedDataManager", "Right items: ${rightItems.map { it.text }}")
+        
+        // Force UI update by creating new list instances
+        val leftItemsCopy = leftItems.toList()
+        val rightItemsCopy = rightItems.toList()
+        
+        android.util.Log.d("UnifiedDataManager", "Submitting left items: ${leftItemsCopy.map { it.text }}")
+        android.util.Log.d("UnifiedDataManager", "Submitting right items: ${rightItemsCopy.map { it.text }}")
+        
+        leftAdapter?.submitList(leftItemsCopy)
+        rightAdapter?.submitList(rightItemsCopy)
+        
+        // Force immediate UI update
+        leftAdapter?.notifyDataSetChanged()
+        rightAdapter?.notifyDataSetChanged()
+        
+        android.util.Log.d("UnifiedDataManager", "=== ADAPTERS UPDATED SUCCESSFULLY ===")
     }
     
     fun validateDataConsistency() {

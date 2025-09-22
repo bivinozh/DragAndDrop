@@ -3,7 +3,8 @@ package com.example.draganddrop
 data class Item(
     val id: Int,
     val text: String,
-    val color: Int
+    val color: Int,
+    val isDraggable: Boolean = true
 ) {
     companion object {
         fun createSampleItems(): List<Item> {
@@ -26,7 +27,8 @@ data class Item(
                 Item(
                     id = index,
                     text = "Item $index",
-                    color = colors[index - 1]
+                    color = colors[index - 1],
+                    isDraggable = index > 2 // Items 1 and 2 are non-draggable
                 )
             }
         }

@@ -18,7 +18,15 @@ class ItemAdapter(
         
         fun bind(item: Item) {
             textView.text = item.text
-            textView.setBackgroundColor(item.color)
+            if (item.isDraggable) {
+                textView.setBackgroundColor(item.color)
+                textView.alpha = 1.0f
+            } else {
+                // Make non-draggable items appear disabled
+                textView.setBackgroundColor(item.color)
+                textView.alpha = 0.5f
+                textView.text = "${item.text} (Fixed)"
+            }
         }
     }
 
@@ -33,12 +41,29 @@ class ItemAdapter(
         holder.bind(item)
         
         holder.itemView.setOnClickListener {
-            onItemClick(item)
+            if (item.isDraggable) {
+                onItemClick(item)
+            }
         }
         
         holder.itemView.setOnLongClickListener {
-            onItemLongClick(item)
-            true
+            if (item.isDraggable) {
+                onItemLongClick(item)
+                true
+            } else {
+                false // Don't handle long click for non-draggable items
+            }
+        }
+    }
+
+    /**
+     * Public method to get an item at a specific position
+     */
+    fun getItemAt(position: Int): Item? {
+        return if (position >= 0 && position < itemCount) {
+            getItem(position)
+        } else {
+            null
         }
     }
 
