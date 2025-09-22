@@ -15,6 +15,11 @@ class ItemAdapter(
 
     class ItemViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val textView: TextView = itemView.findViewById(R.id.item_text)
+        
+        fun bind(item: Item) {
+            textView.text = item.text
+            textView.setBackgroundColor(item.color)
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ItemViewHolder {
@@ -25,8 +30,7 @@ class ItemAdapter(
 
     override fun onBindViewHolder(holder: ItemViewHolder, position: Int) {
         val item = getItem(position)
-        holder.textView.text = item.text
-        holder.textView.setBackgroundColor(item.color)
+        holder.bind(item)
         
         holder.itemView.setOnClickListener {
             onItemClick(item)
@@ -48,3 +52,4 @@ class ItemAdapter(
         }
     }
 }
+

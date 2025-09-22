@@ -28,19 +28,32 @@ class CrossRecyclerViewTouchHelper(
         val fromPosition = viewHolder.adapterPosition
         val toPosition = target.adapterPosition
         
-        // Handle moves within the same RecyclerView
-        if (recyclerView == draggedFromRecyclerView) {
-            dataManager.moveItem(recyclerView, fromPosition, recyclerView, toPosition)
-            return true
+        if (fromPosition == RecyclerView.NO_POSITION || toPosition == RecyclerView.NO_POSITION) {
+            return false
         }
         
-        // Handle moves between different RecyclerViews
-        if (draggedFromRecyclerView != null && draggedFromRecyclerView != recyclerView) {
-            dataManager.moveItem(draggedFromRecyclerView!!, draggedFromPosition, recyclerView, toPosition)
-            return true
+        // Only allow drops on existing items (not empty areas)
+        if (!isValidDropTarget(recyclerView, target)) {
+            android.util.Log.d("CrossRecyclerViewTouchHelper", "Invalid drop target - not dropping on an item")
+            return false
         }
         
-        return false
+        return try {
+            // Handle moves within the same RecyclerView
+            if (recyclerView == draggedFromRecyclerView) {
+                dataManager.moveItem(recyclerView, fromPosition, recyclerView, toPosition)
+                true
+            } else if (draggedFromRecyclerView != null && draggedFromRecyclerView != recyclerView) {
+                // Handle moves between different RecyclerViews
+                dataManager.moveItem(draggedFromRecyclerView!!, draggedFromPosition, recyclerView, toPosition)
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CrossRecyclerViewTouchHelper", "Error during move operation", e)
+            false
+        }
     }
 
     override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
@@ -85,10 +98,17 @@ class CrossRecyclerViewTouchHelper(
             val targetPosition = getTargetPosition(otherRecyclerView, viewHolder.itemView)
             
             if (targetPosition != -1) {
-                isDraggingOverOther = true
-                targetRecyclerView = otherRecyclerView
-                highlightTargetPosition(otherRecyclerView, targetPosition)
-                drawConnectionLine(c, recyclerView, otherRecyclerView)
+                val targetViewHolder = otherRecyclerView.findViewHolderForAdapterPosition(targetPosition)
+                if (isValidDropTarget(otherRecyclerView, targetViewHolder)) {
+                    isDraggingOverOther = true
+                    targetRecyclerView = otherRecyclerView
+                    highlightTargetPosition(otherRecyclerView, targetPosition)
+                    drawConnectionLine(c, recyclerView, otherRecyclerView)
+                } else {
+                    isDraggingOverOther = false
+                    targetRecyclerView = null
+                    clearHighlights(otherRecyclerView)
+                }
             } else {
                 isDraggingOverOther = false
                 targetRecyclerView = null
@@ -107,13 +127,20 @@ class CrossRecyclerViewTouchHelper(
         val targetPosition = getTargetPosition(otherRecyclerView, viewHolder.itemView)
         
         if (targetPosition != -1 && draggedFromRecyclerView != null && draggedFromRecyclerView != recyclerView) {
-            // Move item to the other RecyclerView
-            dataManager.moveItem(
-                draggedFromRecyclerView!!,
-                draggedFromPosition,
-                otherRecyclerView,
-                targetPosition
-            )
+            // Only allow drops on existing items (not empty areas)
+            val targetViewHolder = otherRecyclerView.findViewHolderForAdapterPosition(targetPosition)
+            if (isValidDropTarget(otherRecyclerView, targetViewHolder)) {
+                // Move item to the other RecyclerView
+                dataManager.moveItem(
+                    draggedFromRecyclerView!!,
+                    draggedFromPosition,
+                    otherRecyclerView,
+                    targetPosition
+                )
+                android.util.Log.d("CrossRecyclerViewTouchHelper", "Item dropped on valid target at position: $targetPosition")
+            } else {
+                android.util.Log.d("CrossRecyclerViewTouchHelper", "Drop cancelled - not on valid item")
+            }
         }
         
         // Clear highlights
@@ -123,45 +150,70 @@ class CrossRecyclerViewTouchHelper(
     }
 
     private fun getTargetPosition(targetRecyclerView: RecyclerView, draggedView: android.view.View): Int {
-        val targetLayoutManager = targetRecyclerView.layoutManager ?: return -1
-        
-        // Get the center point of the dragged view
-        val centerX = draggedView.left + draggedView.width / 2
-        val centerY = draggedView.top + draggedView.height / 2
-        
-        // Convert to target RecyclerView coordinates
-        val location = IntArray(2)
-        targetRecyclerView.getLocationOnScreen(location)
-        val targetX = centerX - location[0]
-        val targetY = centerY - location[1]
-        
-        // Check if the dragged view is over the target RecyclerView
-        if (targetX >= 0 && targetX <= targetRecyclerView.width && 
-            targetY >= 0 && targetY <= targetRecyclerView.height) {
+        return try {
+            val targetLayoutManager = targetRecyclerView.layoutManager ?: return -1
             
-            // Find the child view under the dragged item
-            val childView = targetRecyclerView.findChildViewUnder(targetX.toFloat(), targetY.toFloat())
-            return if (childView != null) {
-                val position = targetRecyclerView.getChildAdapterPosition(childView)
-                if (position != RecyclerView.NO_POSITION) position else -1
-            } else {
-                // If no child found, check if we should add to the end
-                val adapter = targetRecyclerView.adapter
-                if (adapter != null && adapter.itemCount > 0) {
-                    adapter.itemCount - 1
-                } else {
-                    0
+            // Get the center point of the dragged view
+            val centerX = draggedView.left + draggedView.width / 2
+            val centerY = draggedView.top + draggedView.height / 2
+            
+            // Convert to target RecyclerView coordinates
+            val location = IntArray(2)
+            targetRecyclerView.getLocationOnScreen(location)
+            val targetX = centerX - location[0]
+            val targetY = centerY - location[1]
+            
+            // Check if the dragged view is over the target RecyclerView
+            if (targetX >= 0 && targetX <= targetRecyclerView.width && 
+                targetY >= 0 && targetY <= targetRecyclerView.height) {
+                
+                // Find the child view under the dragged item
+                val childView = targetRecyclerView.findChildViewUnder(targetX.toFloat(), targetY.toFloat())
+                if (childView != null) {
+                    val position = targetRecyclerView.getChildAdapterPosition(childView)
+                    // Only return position if it's valid and corresponds to an actual item
+                    if (position != RecyclerView.NO_POSITION && position < targetRecyclerView.adapter?.itemCount ?: 0) {
+                        return position
+                    }
                 }
             }
+            -1
+        } catch (e: Exception) {
+            android.util.Log.e("CrossRecyclerViewTouchHelper", "Error calculating target position", e)
+            -1
+        }
+    }
+    
+    /**
+     * Validates if the drop target is a valid item (not empty area)
+     */
+    private fun isValidDropTarget(recyclerView: RecyclerView, targetViewHolder: RecyclerView.ViewHolder?): Boolean {
+        if (targetViewHolder == null) {
+            return false
         }
         
-        return -1
+        val position = targetViewHolder.adapterPosition
+        if (position == RecyclerView.NO_POSITION) {
+            return false
+        }
+        
+        val adapter = recyclerView.adapter
+        if (adapter == null || position >= adapter.itemCount) {
+            return false
+        }
+        
+        // Additional check: ensure the target view holder is actually bound to an item
+        return targetViewHolder.itemView.parent != null
     }
 
     private fun highlightTargetPosition(recyclerView: RecyclerView, position: Int) {
         val viewHolder = recyclerView.findViewHolderForAdapterPosition(position)
-        viewHolder?.itemView?.alpha = 0.6f
-        viewHolder?.itemView?.elevation = 4f
+        viewHolder?.let { holder ->
+            // Valid drop target - highlight in green
+            holder.itemView.alpha = 0.8f
+            holder.itemView.elevation = 8f
+            holder.itemView.setBackgroundColor(android.graphics.Color.parseColor("#E8F5E8")) // Light green
+        }
     }
 
     private fun clearHighlights(recyclerView: RecyclerView) {
@@ -169,6 +221,8 @@ class CrossRecyclerViewTouchHelper(
             val child = recyclerView.getChildAt(i)
             child.alpha = 1.0f
             child.elevation = 0f
+            // Reset background color - the adapter will handle setting the proper item color
+            child.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         }
     }
 

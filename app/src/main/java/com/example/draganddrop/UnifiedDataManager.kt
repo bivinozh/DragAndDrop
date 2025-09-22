@@ -2,14 +2,23 @@ package com.example.draganddrop
 
 import androidx.recyclerview.widget.RecyclerView
 
+/**
+ * Manages data for both RecyclerViews in a unified manner
+ * Handles drag and drop operations between left (grid) and right (linear) sections
+ */
 class UnifiedDataManager {
     
-    // Single unified data source - all items in one list
-    private val allItems: MutableList<Item> = Item.createSampleItems().toMutableList()
-    
-    // Adapters
+    private var leftItems = mutableListOf<Item>()
+    private var rightItems = mutableListOf<Item>()
     private var leftAdapter: ItemAdapter? = null
     private var rightAdapter: ItemAdapter? = null
+    
+    init {
+        // Initialize with sample data - split items between left and right
+        val allItems = Item.createSampleItems()
+        leftItems.addAll(allItems.take(6)) // First 6 items go to grid
+        rightItems.addAll(allItems.drop(6)) // Remaining items go to linear
+    }
     
     fun setAdapters(leftAdapter: ItemAdapter, rightAdapter: ItemAdapter) {
         this.leftAdapter = leftAdapter
@@ -17,153 +26,86 @@ class UnifiedDataManager {
         updateAdapters()
     }
     
-    fun getLeftItems(): List<Item> = allItems.take(10)
-    fun getRightItems(): List<Item> = allItems.drop(10)
+    fun getLeftItems(): List<Item> = leftItems.toList()
+    fun getRightItems(): List<Item> = rightItems.toList()
+    fun getAllItems(): List<Item> = leftItems + rightItems
     
-    fun moveItem(fromRecyclerView: RecyclerView, fromPosition: Int, toRecyclerView: RecyclerView, toPosition: Int) {
-        val isFromLeft = fromRecyclerView.id == R.id.left_recycler_view
-        val isToLeft = toRecyclerView.id == R.id.left_recycler_view
+    fun moveItem(
+        fromRecyclerView: RecyclerView,
+        fromPosition: Int,
+        toRecyclerView: RecyclerView,
+        toPosition: Int
+    ) {
+        val (fromList, toList, fromAdapter, toAdapter) = getListAndAdapter(fromRecyclerView, toRecyclerView)
         
-        android.util.Log.d("UnifiedDataManager", "Moving item from ${if (isFromLeft) "left" else "right"} pos $fromPosition to ${if (isToLeft) "left" else "right"} pos $toPosition")
-        android.util.Log.d("UnifiedDataManager", "Before move - Left items: ${allItems.take(10).map { it.text }}, Right items: ${allItems.drop(10).map { it.text }}")
-        
-        // Calculate global positions in the unified list
-        val globalFromPosition = if (isFromLeft) fromPosition else 10 + fromPosition
-        val globalToPosition = if (isToLeft) toPosition else 10 + toPosition
-        
-        android.util.Log.d("UnifiedDataManager", "Position mapping:")
-        android.util.Log.d("UnifiedDataManager", "  From: ${if (isFromLeft) "left" else "right"} pos $fromPosition -> global $globalFromPosition")
-        android.util.Log.d("UnifiedDataManager", "  To: ${if (isToLeft) "left" else "right"} pos $toPosition -> global $globalToPosition")
-        
-        android.util.Log.d("UnifiedDataManager", "Global positions: from $globalFromPosition to $globalToPosition")
-        
-        // Validate positions before proceeding
-        if (globalFromPosition < 0 || globalFromPosition >= allItems.size) {
-            android.util.Log.e("UnifiedDataManager", "Invalid from position: $globalFromPosition (size: ${allItems.size})")
-            return
-        }
-        
-        if (globalToPosition < 0 || globalToPosition > allItems.size) {
-            android.util.Log.e("UnifiedDataManager", "Invalid to position: $globalToPosition (size: ${allItems.size})")
-            return
-        }
-        
-        // Perform the move in the unified list
-        if (globalFromPosition != globalToPosition) {
-            val item = allItems.removeAt(globalFromPosition)
-            
-            // Simplified position calculation
-            val finalPosition = if (globalFromPosition < globalToPosition) {
-                // Moving forward - adjust for the removed item
-                val adjustedPosition = globalToPosition - 1
-                android.util.Log.d("UnifiedDataManager", "Moving forward: $globalFromPosition -> $globalToPosition, adjusted to $adjustedPosition")
-                adjustedPosition.coerceIn(0, allItems.size)
-            } else {
-                // Moving backward - no adjustment needed
-                android.util.Log.d("UnifiedDataManager", "Moving backward: $globalFromPosition -> $globalToPosition")
-                globalToPosition.coerceIn(0, allItems.size)
+        if (fromList != null && toList != null && fromAdapter != null && toAdapter != null) {
+            // Validate positions are within bounds
+            if (fromPosition < 0 || fromPosition >= fromList.size) {
+                android.util.Log.e("UnifiedDataManager", "Invalid fromPosition: $fromPosition, list size: ${fromList.size}")
+                return
             }
             
-            android.util.Log.d("UnifiedDataManager", "Final insertion position: $finalPosition, allItems size: ${allItems.size}")
+            if (toPosition < 0 || toPosition >= toList.size) {
+                android.util.Log.e("UnifiedDataManager", "Invalid toPosition: $toPosition, list size: ${toList.size}")
+                return
+            }
             
-            // Insert at the calculated position
-            allItems.add(finalPosition, item)
+            val item = fromList.removeAt(fromPosition)
             
-            android.util.Log.d("UnifiedDataManager", "After move - Left items: ${allItems.take(10).map { it.text }}, Right items: ${allItems.drop(10).map { it.text }}")
-        } else {
-            android.util.Log.d("UnifiedDataManager", "Same position, no move needed")
+            // Adjust toPosition if moving within the same list
+            val adjustedToPosition = if (fromList == toList && toPosition > fromPosition) {
+                toPosition - 1
+            } else {
+                toPosition
+            }
+            
+            // Ensure adjusted position is still valid
+            if (adjustedToPosition >= 0 && adjustedToPosition <= toList.size) {
+                toList.add(adjustedToPosition, item)
+                updateAdapters()
+                android.util.Log.d("UnifiedDataManager", "Item moved from position $fromPosition to $adjustedToPosition")
+            } else {
+                // If invalid, put item back
+                fromList.add(fromPosition, item)
+                android.util.Log.e("UnifiedDataManager", "Invalid adjusted position: $adjustedToPosition")
+            }
         }
+    }
+    
+    private fun getListAndAdapter(
+        fromRecyclerView: RecyclerView,
+        toRecyclerView: RecyclerView
+    ): Quadruple<MutableList<Item>?, MutableList<Item>?, ItemAdapter?, ItemAdapter?> {
+        val fromList = if (fromRecyclerView.id == R.id.left_recycler_view) leftItems else rightItems
+        val toList = if (toRecyclerView.id == R.id.left_recycler_view) leftItems else rightItems
+        val fromAdapter = if (fromRecyclerView.id == R.id.left_recycler_view) leftAdapter else rightAdapter
+        val toAdapter = if (toRecyclerView.id == R.id.left_recycler_view) leftAdapter else rightAdapter
         
-        // Update both adapters with the unified data
-        updateAdapters()
-        
-        // Debug the final state
-        debugCurrentState()
+        return Quadruple(fromList, toList, fromAdapter, toAdapter)
     }
     
     private fun updateAdapters() {
-        // Both adapters get their respective portions of the unified data
-        leftAdapter?.submitList(allItems.take(10))
-        rightAdapter?.submitList(allItems.drop(10))
-    }
-    
-    private fun updateAdaptersWithAnimation() {
-        // Update adapters with slow-motion effect
-        android.util.Log.d("UnifiedDataManager", "Updating adapters with slow-motion animation")
-        
-        // Add a small delay to make the move animation visible
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            leftAdapter?.submitList(allItems.take(10))
-            rightAdapter?.submitList(allItems.drop(10))
-            android.util.Log.d("UnifiedDataManager", "Slow-motion adapter update completed")
-        }, 300) // 300ms delay for slow-motion effect
-    }
-    
-    fun getItemAtPosition(recyclerView: RecyclerView, position: Int): Item? {
-        val globalPosition = if (recyclerView.id == R.id.left_recycler_view) {
-            position
-        } else {
-            10 + position
-        }
-        
-        return if (globalPosition < allItems.size) {
-            allItems[globalPosition]
-        } else {
-            null
-        }
-    }
-    
-    fun getAllItems(): List<Item> = allItems.toList()
-    
-    fun getGlobalPosition(recyclerView: RecyclerView, position: Int): Int {
-        return if (recyclerView.id == R.id.left_recycler_view) {
-            position
-        } else {
-            10 + position
-        }
+        leftAdapter?.submitList(getLeftItems())
+        rightAdapter?.submitList(getRightItems())
     }
     
     fun validateDataConsistency() {
-        android.util.Log.d("UnifiedDataManager", "Validating data consistency...")
-        android.util.Log.d("UnifiedDataManager", "Total items: ${allItems.size}")
-        android.util.Log.d("UnifiedDataManager", "Left items count: ${allItems.take(10).size}")
-        android.util.Log.d("UnifiedDataManager", "Right items count: ${allItems.drop(10).size}")
+        val allIds = getAllItems().map { it.id }
+        val uniqueIds = allIds.toSet()
         
-        if (allItems.size != 12) {
-            android.util.Log.e("UnifiedDataManager", "Data inconsistency: Expected 12 items, got ${allItems.size}")
+        if (allIds.size != uniqueIds.size) {
+            android.util.Log.e("UnifiedDataManager", "Duplicate IDs found!")
         }
         
-        if (allItems.take(10).size != 10) {
-            android.util.Log.e("UnifiedDataManager", "Left RecyclerView inconsistency: Expected 10 items, got ${allItems.take(10).size}")
-        }
-        
-        if (allItems.drop(10).size != 2) {
-            android.util.Log.e("UnifiedDataManager", "Right RecyclerView inconsistency: Expected 2 items, got ${allItems.drop(10).size}")
-        }
-    }
-    
-    fun debugCurrentState() {
-        android.util.Log.d("UnifiedDataManager", "=== CURRENT STATE DEBUG ===")
-        android.util.Log.d("UnifiedDataManager", "All items: ${allItems.mapIndexed { index, item -> "$index:${item.text}" }}")
-        android.util.Log.d("UnifiedDataManager", "Left items (0-9): ${allItems.take(10).mapIndexed { index, item -> "$index:${item.text}" }}")
-        android.util.Log.d("UnifiedDataManager", "Right items (10-11): ${allItems.drop(10).mapIndexed { index, item -> "${index + 10}:${item.text}" }}")
-        android.util.Log.d("UnifiedDataManager", "=== END DEBUG ===")
+        android.util.Log.d("UnifiedDataManager", "Data consistency check passed. Total items: ${allIds.size}, Unique IDs: ${uniqueIds.size}")
     }
     
     fun testPositionMapping() {
-        android.util.Log.d("UnifiedDataManager", "=== POSITION MAPPING TEST ===")
-        android.util.Log.d("UnifiedDataManager", "Left RecyclerView positions:")
-        for (i in 0..9) {
-            val globalPos = i
-            val item = if (globalPos < allItems.size) allItems[globalPos] else null
-            android.util.Log.d("UnifiedDataManager", "  Left pos $i -> Global pos $globalPos -> Item: ${item?.text}")
-        }
-        android.util.Log.d("UnifiedDataManager", "Right RecyclerView positions:")
-        for (i in 0..1) {
-            val globalPos = 10 + i
-            val item = if (globalPos < allItems.size) allItems[globalPos] else null
-            android.util.Log.d("UnifiedDataManager", "  Right pos $i -> Global pos $globalPos -> Item: ${item?.text}")
-        }
-        android.util.Log.d("UnifiedDataManager", "=== END POSITION MAPPING TEST ===")
+        android.util.Log.d("UnifiedDataManager", "Testing position mapping...")
+        android.util.Log.d("UnifiedDataManager", "Left positions: ${leftItems.indices.joinToString()}")
+        android.util.Log.d("UnifiedDataManager", "Right positions: ${rightItems.indices.joinToString()}")
     }
+    
+    // Helper data class for multiple return values
+    private data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
 }
