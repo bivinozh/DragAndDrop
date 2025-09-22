@@ -7,7 +7,7 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 
 class CrossRecyclerViewTouchHelper(
-    private val dataManager: UnifiedDataManager,
+    private val viewModel: DragDropViewModel,
     private val leftRecyclerView: RecyclerView,
     private val rightRecyclerView: RecyclerView,
     private val requiredOverlapPercentage: Double = 90.0 // Default 90% overlap required
@@ -49,7 +49,7 @@ class CrossRecyclerViewTouchHelper(
         // For same RecyclerView, allow normal swapping
         if (recyclerView == draggedFromRecyclerView) {
             android.util.Log.d("CrossRecyclerViewTouchHelper", "Same RecyclerView move - allowing")
-            dataManager.moveItem(recyclerView, fromPosition, recyclerView, toPosition)
+            viewModel.moveItem(recyclerView.id, fromPosition, recyclerView.id, toPosition)
             return true
         }
         
@@ -88,6 +88,10 @@ class CrossRecyclerViewTouchHelper(
                     draggedFromPosition = position
                     draggedFromRecyclerView = recyclerView
                     
+                    // Update ViewModel with drag state
+                    viewModel.setDragging(true)
+                    viewModel.setDragSourceInfo(recyclerView.id, position)
+                    
                     // Smooth visual feedback for drag start
                     it.itemView.animate()
                         .alpha(0.8f)
@@ -123,6 +127,10 @@ class CrossRecyclerViewTouchHelper(
                 // Clear all highlights immediately when drag ends
                 clearHighlights(leftRecyclerView)
                 clearHighlights(rightRecyclerView)
+                
+                // Update ViewModel with drag end state
+                viewModel.setDragging(false)
+                viewModel.clearDragSourceInfo()
                 
                 android.util.Log.d("CrossRecyclerViewTouchHelper", "Drag ended - Position: $draggedFromPosition, Focus cleared")
                 draggedFromPosition = -1
@@ -265,10 +273,10 @@ class CrossRecyclerViewTouchHelper(
                     android.util.Log.d("CrossRecyclerViewTouchHelper", "=== EXECUTING CROSS-RECYCLERVIEW REPLACEMENT ===")
                     
                     try {
-                        dataManager.moveItem(
-                            sourceRecyclerView!!,
+                        viewModel.moveItem(
+                            sourceRecyclerView!!.id,
                             draggedFromPosition,
-                            otherRecyclerView,
+                            otherRecyclerView.id,
                             targetPosition
                         )
                         android.util.Log.d("CrossRecyclerViewTouchHelper", "=== REPLACEMENT SUCCESSFUL ===")
