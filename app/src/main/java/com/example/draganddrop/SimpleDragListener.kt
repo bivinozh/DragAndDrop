@@ -15,17 +15,13 @@ import com.example.draganddrop.repository.ItemRepository
 
 class SimpleDragListener(
     private val viewModel: DragDropViewModel,
-    private val leftRecyclerView: RecyclerView,
-    private val rightRecyclerView: RecyclerView
 ) : View.OnDragListener {
-
 
     private var draggedItem: Item? = null
     private var draggedFromPosition = -1
     private var draggedFromRecyclerView: RecyclerView? = null
     private var draggedItemView: View? = null
-    private val COVERAGE_THRESHOLD = 0.9f // 90% coverage required
-    
+
     // Target focus tracking
     private var currentFocusedView: View? = null
     private var currentFocusedPosition = -1
@@ -34,10 +30,6 @@ class SimpleDragListener(
     // Floating animation
     private var floatingAnimation: Animation? = null
     private var isFloating = false
-    
-    // Slow-motion animation settings
-    private val SLOW_MOTION_DURATION = 1500L // 1.5 seconds for smooth transitions
-    private val SLOW_MOTION_INTERPOLATOR = DecelerateInterpolator(2.0f)
 
     override fun onDrag(view: View, event: DragEvent): Boolean {
         when (event.action) {

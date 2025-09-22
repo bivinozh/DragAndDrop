@@ -6,7 +6,6 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -15,7 +14,6 @@ import android.view.View
 import android.widget.Button
 import android.widget.Toast
 import com.example.draganddrop.viewmodel.DragDropViewModel
-import com.example.draganddrop.repository.ItemRepository
 
 class MainActivity : AppCompatActivity() {
     
@@ -63,7 +61,7 @@ class MainActivity : AppCompatActivity() {
         rightRecyclerView = findViewById(R.id.right_recycler_view)
         
         // Initialize drag listener with ViewModel
-        dragListener = SimpleDragListener(viewModel, leftRecyclerView, rightRecyclerView)
+        dragListener = SimpleDragListener(viewModel)
         
         // Setup Left RecyclerView (Grid)
         leftAdapter = ItemAdapter(

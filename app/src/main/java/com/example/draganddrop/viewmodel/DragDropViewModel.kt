@@ -15,9 +15,7 @@ import kotlinx.coroutines.launch
 class DragDropViewModel : ViewModel() {
     
     private val repository = ItemRepository()
-    
-    // Expose repository data to UI
-    val allItems: LiveData<List<Item>> = repository.allItems
+
     val leftItems: LiveData<List<Item>> = repository.leftItems
     val rightItems: LiveData<List<Item>> = repository.rightItems
     
@@ -27,27 +25,8 @@ class DragDropViewModel : ViewModel() {
     
     private val _dragOperationResult = MutableLiveData<String>()
     val dragOperationResult: LiveData<String> = _dragOperationResult
-    
-    /**
-     * Moves an item within the same RecyclerView
-     */
-    fun moveItemWithinRecyclerView(fromPosition: Int, toPosition: Int) {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                repository.moveItem(fromPosition, toPosition)
-                _dragOperationResult.value = "Item moved successfully"
-            } catch (e: IllegalStateException) {
-                // Handle specific locked item errors
-                _dragOperationResult.value = e.message ?: "Cannot move item"
-            } catch (e: Exception) {
-                _dragOperationResult.value = "Error moving item: ${e.message}"
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-    
+
+
     /**
      * Moves an item between different RecyclerViews
      */
@@ -92,40 +71,12 @@ class DragDropViewModel : ViewModel() {
             }
         }
     }
-    
-    /**
-     * Gets an item at a specific position
-     */
-    fun getItemAt(position: Int): Item? {
-        return repository.getItemAt(position)
-    }
-    
-    /**
-     * Gets the current item count
-     */
-    fun getItemCount(): Int {
-        return repository.getItemCount()
-    }
-    
+
     /**
      * Clears the drag operation result message
      */
     fun clearDragResult() {
         _dragOperationResult.value = null
-    }
-    
-    /**
-     * Checks if an item at a specific position is draggable
-     */
-    fun isItemDraggable(position: Int): Boolean {
-        return repository.isItemDraggable(position)
-    }
-    
-    /**
-     * Checks if an item at a specific RecyclerView position is draggable
-     */
-    fun isItemDraggable(recyclerViewType: ItemRepository.RecyclerViewType, position: Int): Boolean {
-        return repository.isItemDraggable(recyclerViewType, position)
     }
     
     /**
