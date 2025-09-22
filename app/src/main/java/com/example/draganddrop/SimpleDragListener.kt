@@ -10,9 +10,11 @@ import android.view.animation.ScaleAnimation
 import android.view.animation.AnimationSet
 import android.view.animation.DecelerateInterpolator
 import androidx.recyclerview.widget.RecyclerView
+import com.example.draganddrop.viewmodel.DragDropViewModel
+import com.example.draganddrop.repository.ItemRepository
 
 class SimpleDragListener(
-    private val dataManager: UnifiedDataManager,
+    private val viewModel: DragDropViewModel,
     private val leftRecyclerView: RecyclerView,
     private val rightRecyclerView: RecyclerView
 ) : View.OnDragListener {
@@ -67,12 +69,22 @@ class SimpleDragListener(
                 
                 if (targetPosition >= 0 && draggedFromRecyclerView != null) {
                     showMoveInProgress(targetRecyclerView, targetPosition)
-                    dataManager.moveItem(
-                        draggedFromRecyclerView!!,
-                        draggedFromPosition,
-                        targetRecyclerView,
-                        targetPosition
-                    )
+                    
+                    // Determine RecyclerView types
+                    val fromType = if (draggedFromRecyclerView!!.id == R.id.left_recycler_view) {
+                        ItemRepository.RecyclerViewType.LEFT
+                    } else {
+                        ItemRepository.RecyclerViewType.RIGHT
+                    }
+                    
+                    val toType = if (targetRecyclerView.id == R.id.left_recycler_view) {
+                        ItemRepository.RecyclerViewType.LEFT
+                    } else {
+                        ItemRepository.RecyclerViewType.RIGHT
+                    }
+                    
+                    // Use ViewModel to handle the move
+                    viewModel.moveItemBetweenRecyclerViews(fromType, draggedFromPosition, toType, targetPosition)
                 }
                 return true
             }

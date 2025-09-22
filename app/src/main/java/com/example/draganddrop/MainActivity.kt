@@ -2,14 +2,19 @@ package com.example.draganddrop
 
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import android.graphics.Rect
 import android.view.View
+import android.widget.Toast
+import com.example.draganddrop.viewmodel.DragDropViewModel
+import com.example.draganddrop.repository.ItemRepository
 
 class MainActivity : AppCompatActivity() {
     
@@ -32,8 +37,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rightRecyclerView: RecyclerView
     private lateinit var leftAdapter: ItemAdapter
     private lateinit var rightAdapter: ItemAdapter
-    private lateinit var dataManager: UnifiedDataManager
     private lateinit var dragListener: SimpleDragListener
+    
+    // MVVM Components
+    private val viewModel: DragDropViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,17 +53,15 @@ class MainActivity : AppCompatActivity() {
         }
         
         setupRecyclerViews()
+        setupViewModelObservers()
     }
     
     private fun setupRecyclerViews() {
         leftRecyclerView = findViewById(R.id.left_recycler_view)
         rightRecyclerView = findViewById(R.id.right_recycler_view)
         
-        // Initialize data manager
-        dataManager = UnifiedDataManager()
-        
-        // Initialize drag listener
-        dragListener = SimpleDragListener(dataManager, leftRecyclerView, rightRecyclerView)
+        // Initialize drag listener with ViewModel
+        dragListener = SimpleDragListener(viewModel, leftRecyclerView, rightRecyclerView)
         
         // Setup Left RecyclerView (Grid)
         leftAdapter = ItemAdapter(
@@ -65,7 +70,7 @@ class MainActivity : AppCompatActivity() {
             },
             onItemLongClick = { item -> 
                 android.util.Log.d("MainActivity", "Left item long clicked: ${item.text}")
-                val position = dataManager.getLeftItems().indexOf(item)
+                val position = viewModel.leftItems.value?.indexOf(item) ?: -1
                 if (position != -1) {
                     dragListener.startDrag(item, leftRecyclerView, position)
                 }
@@ -86,7 +91,7 @@ class MainActivity : AppCompatActivity() {
             },
             onItemLongClick = { item -> 
                 android.util.Log.d("MainActivity", "Right item long clicked: ${item.text}")
-                val position = dataManager.getRightItems().indexOf(item)
+                val position = viewModel.rightItems.value?.indexOf(item) ?: -1
                 if (position != -1) {
                     dragListener.startDrag(item, rightRecyclerView, position)
                 }
@@ -100,10 +105,29 @@ class MainActivity : AppCompatActivity() {
             addItemDecoration(ItemSpacingDecoration(8))
         }
         
-        // Set up data manager with adapters
-        dataManager.setAdapters(leftAdapter, rightAdapter)
+        // Observe ViewModel data for adapters
+        viewModel.leftItems.observe(this) { items ->
+            leftAdapter.submitList(items)
+        }
         
-        // Log initial data
-        android.util.Log.d("MainActivity", "Setup complete - Left: ${dataManager.getLeftItems().size} items, Right: ${dataManager.getRightItems().size} items")
+        viewModel.rightItems.observe(this) { items ->
+            rightAdapter.submitList(items)
+        }
+    }
+    
+    private fun setupViewModelObservers() {
+        // Observe drag operation results
+        viewModel.dragOperationResult.observe(this) { result ->
+            result?.let {
+                Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
+                viewModel.clearDragResult()
+            }
+        }
+        
+        // Observe loading state
+        viewModel.isLoading.observe(this) { isLoading ->
+            // You can show/hide loading indicators here if needed
+            android.util.Log.d("MainActivity", "Loading state: $isLoading")
+        }
     }
 }
