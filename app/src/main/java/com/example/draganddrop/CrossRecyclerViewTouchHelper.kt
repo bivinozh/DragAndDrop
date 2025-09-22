@@ -120,7 +120,11 @@ class CrossRecyclerViewTouchHelper(
                     }
                 }
                 
-                android.util.Log.d("CrossRecyclerViewTouchHelper", "Drag ended - Position: $draggedFromPosition")
+                // Clear all highlights immediately when drag ends
+                clearHighlights(leftRecyclerView)
+                clearHighlights(rightRecyclerView)
+                
+                android.util.Log.d("CrossRecyclerViewTouchHelper", "Drag ended - Position: $draggedFromPosition, Focus cleared")
                 draggedFromPosition = -1
                 draggedFromRecyclerView = null
                 isDraggingOverOther = false
@@ -188,22 +192,25 @@ class CrossRecyclerViewTouchHelper(
     override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
         android.util.Log.d("CrossRecyclerViewTouchHelper", "clearView called for position: ${viewHolder.adapterPosition}")
         
-        // Handle cross-RecyclerView drops here BEFORE calling super.clearView()
+        // Clear all highlights immediately when drop starts
+        val otherRecyclerView = if (recyclerView == leftRecyclerView) rightRecyclerView else leftRecyclerView
+        clearHighlights(otherRecyclerView)
+        isDraggingOverOther = false
+        targetRecyclerView = null
+        
+        // Handle cross-RecyclerView drops here AFTER clearing highlights
         if (draggedFromRecyclerView != null && draggedFromRecyclerView != recyclerView) {
-            android.util.Log.d("CrossRecyclerViewTouchHelper", "Processing cross-RecyclerView drop before clearing")
+            android.util.Log.d("CrossRecyclerViewTouchHelper", "Processing cross-RecyclerView drop after clearing highlights")
             handleCrossRecyclerViewDrop(recyclerView, viewHolder)
         }
         
         // Now call super.clearView() to handle the normal cleanup
         super.clearView(recyclerView, viewHolder)
-        viewHolder.itemView.alpha = 1.0f
-        viewHolder.itemView.elevation = 0f
         
-        // Clear highlights and reset state
-        val otherRecyclerView = if (recyclerView == leftRecyclerView) rightRecyclerView else leftRecyclerView
-        clearHighlights(otherRecyclerView)
-        isDraggingOverOther = false
-        targetRecyclerView = null
+        // Reset dragged item appearance
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            viewHolder.itemView.elevation = 0f
+        }
     }
     
     private fun handleCrossRecyclerViewDrop(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
@@ -423,13 +430,11 @@ class CrossRecyclerViewTouchHelper(
     private fun clearHighlights(recyclerView: RecyclerView) {
         for (i in 0 until recyclerView.childCount) {
             val child = recyclerView.getChildAt(i)
-            // Smooth animation for clearing highlights
-            child.animate()
-                .alpha(1.0f)
-                .scaleX(1.0f)
-                .scaleY(1.0f)
-                .setDuration(100)
-                .start()
+            
+            // Immediate clearing for drop focus removal
+            child.alpha = 1.0f
+            child.scaleX = 1.0f
+            child.scaleY = 1.0f
             
             // Reset elevation for API 21+
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
@@ -438,7 +443,12 @@ class CrossRecyclerViewTouchHelper(
             
             // Reset background color - the adapter will handle setting the proper item color
             child.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            
+            // Cancel any ongoing animations to ensure immediate clearing
+            child.animate().cancel()
         }
+        
+        android.util.Log.d("CrossRecyclerViewTouchHelper", "Target highlights cleared - focus removed")
     }
 
     /**
