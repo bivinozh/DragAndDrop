@@ -73,14 +73,9 @@ class CrossRecyclerViewTouchHelper(
                     val recyclerView = it.itemView.parent as RecyclerView
                     val adapter = recyclerView.adapter as? ItemAdapter
                     
-                    android.util.Log.d("CrossRecyclerViewTouchHelper", "=== DRAG STARTED ===")
-                    android.util.Log.d("CrossRecyclerViewTouchHelper", "Position: $position, RecyclerView: ${recyclerView.id}")
-                    android.util.Log.d("CrossRecyclerViewTouchHelper", "ViewHolder: ${viewHolder.itemView}")
-                    
                     // Check if the item is draggable
                     if (adapter != null && position != RecyclerView.NO_POSITION) {
                         val item = adapter.getItemAt(position)
-                        android.util.Log.d("CrossRecyclerViewTouchHelper", "Item: ${item?.text}, Draggable: ${item?.isDraggable}")
                         if (item != null && !item.isDraggable) {
                             android.util.Log.d("CrossRecyclerViewTouchHelper", "Drag blocked - item is non-draggable: ${item.text}")
                             return
@@ -92,19 +87,40 @@ class CrossRecyclerViewTouchHelper(
                     
                     draggedFromPosition = position
                     draggedFromRecyclerView = recyclerView
-                    it.itemView.alpha = 0.7f
-                    it.itemView.elevation = 8f
-                    android.util.Log.d("CrossRecyclerViewTouchHelper", "Drag state initialized successfully")
-                    android.util.Log.d("CrossRecyclerViewTouchHelper", "  - From Position: $draggedFromPosition")
-                    android.util.Log.d("CrossRecyclerViewTouchHelper", "  - From RecyclerView: ${draggedFromRecyclerView?.id}")
-                    android.util.Log.d("CrossRecyclerViewTouchHelper", "  - Item: ${adapter.getItemAt(position)?.text}")
+                    
+                    // Smooth visual feedback for drag start
+                    it.itemView.animate()
+                        .alpha(0.8f)
+                        .scaleX(1.05f)
+                        .scaleY(1.05f)
+                        .setDuration(150)
+                        .start()
+                    
+                    // Set elevation for API 21+
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                        it.itemView.elevation = 12f
+                    }
+                    
+                    android.util.Log.d("CrossRecyclerViewTouchHelper", "Drag started - Position: $position, Item: ${adapter?.getItemAt(position)?.text}")
                 }
             }
             ItemTouchHelper.ACTION_STATE_IDLE -> {
-                android.util.Log.d("CrossRecyclerViewTouchHelper", "=== DRAG ENDED ===")
-                android.util.Log.d("CrossRecyclerViewTouchHelper", "Final drag position: $draggedFromPosition")
-                android.util.Log.d("CrossRecyclerViewTouchHelper", "Final drag RecyclerView: ${draggedFromRecyclerView?.id}")
-                android.util.Log.d("CrossRecyclerViewTouchHelper", "Resetting drag state")
+                viewHolder?.let {
+                    // Smooth visual feedback for drag end
+                    it.itemView.animate()
+                        .alpha(1.0f)
+                        .scaleX(1.0f)
+                        .scaleY(1.0f)
+                        .setDuration(150)
+                        .start()
+                    
+                    // Reset elevation for API 21+
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                        it.itemView.elevation = 0f
+                    }
+                }
+                
+                android.util.Log.d("CrossRecyclerViewTouchHelper", "Drag ended - Position: $draggedFromPosition")
                 draggedFromPosition = -1
                 draggedFromRecyclerView = null
                 isDraggingOverOther = false
@@ -131,25 +147,40 @@ class CrossRecyclerViewTouchHelper(
             
             if (targetPosition != -1) {
                 val targetViewHolder = otherRecyclerView.findViewHolderForAdapterPosition(targetPosition)
-                if (targetViewHolder != null && isValidDropTarget(otherRecyclerView, targetViewHolder)) {
-                    // Only highlight when there's a valid target with proper overlap
-                    isDraggingOverOther = true
-                    targetRecyclerView = otherRecyclerView
-                    highlightTargetPosition(otherRecyclerView, targetPosition)
-                    drawConnectionLine(c, recyclerView, otherRecyclerView)
+                if (targetViewHolder != null) {
+                    val overlapPercentage = calculateOverlapPercentage(viewHolder.itemView, targetViewHolder.itemView)
+                    
+                    if (overlapPercentage >= requiredOverlapPercentage) {
+                        // Valid target with sufficient overlap
+                        if (!isDraggingOverOther || targetRecyclerView != otherRecyclerView) {
+                            isDraggingOverOther = true
+                            targetRecyclerView = otherRecyclerView
+                            highlightTargetPosition(otherRecyclerView, targetPosition)
+                        }
+                        drawConnectionLine(c, recyclerView, otherRecyclerView)
+                    } else {
+                        // Insufficient overlap - clear highlights
+                        if (isDraggingOverOther) {
+                            isDraggingOverOther = false
+                            targetRecyclerView = null
+                            clearHighlights(otherRecyclerView)
+                        }
+                    }
                 } else {
-                    // No valid target or insufficient overlap - clear highlights
+                    // No target ViewHolder - clear highlights
+                    if (isDraggingOverOther) {
+                        isDraggingOverOther = false
+                        targetRecyclerView = null
+                        clearHighlights(otherRecyclerView)
+                    }
+                }
+            } else {
+                // No target position - clear highlights
+                if (isDraggingOverOther) {
                     isDraggingOverOther = false
                     targetRecyclerView = null
                     clearHighlights(otherRecyclerView)
-                    android.util.Log.d("CrossRecyclerViewTouchHelper", "No valid target - clearing highlights")
                 }
-            } else {
-                // No target position found - clear highlights
-                isDraggingOverOther = false
-                targetRecyclerView = null
-                clearHighlights(otherRecyclerView)
-                android.util.Log.d("CrossRecyclerViewTouchHelper", "No target position - clearing highlights")
             }
         }
     }
@@ -360,18 +391,31 @@ class CrossRecyclerViewTouchHelper(
                 
                 // Color coding based on overlap percentage - indicates replacement will happen
                 val backgroundColor = when {
-                    overlapPercentage >= requiredOverlapPercentage -> android.graphics.Color.parseColor("#FF5722") // Red - will be replaced
-                    overlapPercentage >= (requiredOverlapPercentage * 0.8) -> android.graphics.Color.parseColor("#FF9800") // Orange - close but not enough
+                    overlapPercentage >= requiredOverlapPercentage -> android.graphics.Color.parseColor("#4CAF50") // Green - will replace
+                    overlapPercentage >= (requiredOverlapPercentage * 0.8) -> android.graphics.Color.parseColor("#FF9800") // Orange - close
                     overlapPercentage >= (requiredOverlapPercentage * 0.5) -> android.graphics.Color.parseColor("#FFC107") // Amber - getting closer
                     else -> android.graphics.Color.parseColor("#9E9E9E") // Gray - no overlap
                 }
                 
-                holder.itemView.alpha = 0.8f
-                holder.itemView.elevation = 8f
+                // Smooth animation for highlighting
+                holder.itemView.animate()
+                    .alpha(0.9f)
+                    .scaleX(1.02f)
+                    .scaleY(1.02f)
+                    .setDuration(100)
+                    .start()
+                
+                // Set elevation for API 21+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                    holder.itemView.elevation = 6f
+                }
+                
                 holder.itemView.setBackgroundColor(backgroundColor)
                 
-                android.util.Log.d("CrossRecyclerViewTouchHelper", 
-                    "Highlighting position $position with ${overlapPercentage}% overlap - ${if (overlapPercentage >= requiredOverlapPercentage) "WILL REPLACE" else "NOT ENOUGH OVERLAP"}")
+                // Reduced logging for performance
+                if (overlapPercentage >= requiredOverlapPercentage) {
+                    android.util.Log.d("CrossRecyclerViewTouchHelper", "Valid target: ${overlapPercentage.toInt()}% overlap at position $position")
+                }
             }
         }
     }
@@ -379,8 +423,19 @@ class CrossRecyclerViewTouchHelper(
     private fun clearHighlights(recyclerView: RecyclerView) {
         for (i in 0 until recyclerView.childCount) {
             val child = recyclerView.getChildAt(i)
-            child.alpha = 1.0f
-            child.elevation = 0f
+            // Smooth animation for clearing highlights
+            child.animate()
+                .alpha(1.0f)
+                .scaleX(1.0f)
+                .scaleY(1.0f)
+                .setDuration(100)
+                .start()
+            
+            // Reset elevation for API 21+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                child.elevation = 0f
+            }
+            
             // Reset background color - the adapter will handle setting the proper item color
             child.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         }

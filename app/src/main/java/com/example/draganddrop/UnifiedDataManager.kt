@@ -90,30 +90,17 @@ class UnifiedDataManager {
         val draggedItem = fromList[fromPosition]
         val targetItem = toList[toPosition]
         
-        android.util.Log.d("UnifiedDataManager", "=== SWAP ITEMS START ===")
-        android.util.Log.d("UnifiedDataManager", "Dragged item: ${draggedItem.text} from position $fromPosition")
-        android.util.Log.d("UnifiedDataManager", "Target item: ${targetItem.text} at position $toPosition")
-        android.util.Log.d("UnifiedDataManager", "FromList size: ${fromList.size}, ToList size: ${toList.size}")
-        android.util.Log.d("UnifiedDataManager", "FromList: ${fromList.mapIndexed { i, item -> "$i:${item.text}" }}")
-        android.util.Log.d("UnifiedDataManager", "ToList: ${toList.mapIndexed { i, item -> "$i:${item.text}" }}")
-        
         if (fromList == toList) {
             // Same list - swap positions
-            android.util.Log.d("UnifiedDataManager", "Same list swap - swapping positions $fromPosition and $toPosition")
             fromList[fromPosition] = targetItem
             fromList[toPosition] = draggedItem
-            android.util.Log.d("UnifiedDataManager", "Items swapped within same list: ${draggedItem.text} ↔ ${targetItem.text}")
+            android.util.Log.d("UnifiedDataManager", "Swapped: ${draggedItem.text} ↔ ${targetItem.text}")
         } else {
             // Different lists - replace target with dragged item
-            android.util.Log.d("UnifiedDataManager", "Cross-list replacement - moving ${draggedItem.text} to replace ${targetItem.text}")
             fromList.removeAt(fromPosition)
             toList[toPosition] = draggedItem
-            android.util.Log.d("UnifiedDataManager", "Item replaced across lists: ${draggedItem.text} replaces ${targetItem.text}")
+            android.util.Log.d("UnifiedDataManager", "Replaced: ${draggedItem.text} → ${targetItem.text}")
         }
-        
-        android.util.Log.d("UnifiedDataManager", "After swap - FromList: ${fromList.mapIndexed { i, item -> "$i:${item.text}" }}")
-        android.util.Log.d("UnifiedDataManager", "After swap - ToList: ${toList.mapIndexed { i, item -> "$i:${item.text}" }}")
-        android.util.Log.d("UnifiedDataManager", "=== SWAP ITEMS END ===")
     }
     
     
@@ -130,25 +117,18 @@ class UnifiedDataManager {
     }
     
     private fun updateAdapters() {
-        android.util.Log.d("UnifiedDataManager", "=== UPDATING ADAPTERS ===")
-        android.util.Log.d("UnifiedDataManager", "Left items: ${leftItems.map { it.text }}")
-        android.util.Log.d("UnifiedDataManager", "Right items: ${rightItems.map { it.text }}")
-        
         // Force UI update by creating new list instances
         val leftItemsCopy = leftItems.toList()
         val rightItemsCopy = rightItems.toList()
         
-        android.util.Log.d("UnifiedDataManager", "Submitting left items: ${leftItemsCopy.map { it.text }}")
-        android.util.Log.d("UnifiedDataManager", "Submitting right items: ${rightItemsCopy.map { it.text }}")
-        
         leftAdapter?.submitList(leftItemsCopy)
         rightAdapter?.submitList(rightItemsCopy)
         
-        // Force immediate UI update
+        // Force immediate UI update for smooth experience
         leftAdapter?.notifyDataSetChanged()
         rightAdapter?.notifyDataSetChanged()
         
-        android.util.Log.d("UnifiedDataManager", "=== ADAPTERS UPDATED SUCCESSFULLY ===")
+        android.util.Log.d("UnifiedDataManager", "Adapters updated - Left: ${leftItems.size}, Right: ${rightItems.size}")
     }
     
     fun validateDataConsistency() {
