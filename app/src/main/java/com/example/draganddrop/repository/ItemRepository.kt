@@ -13,6 +13,9 @@ class ItemRepository {
     // Private mutable data source
     private val _allItems = MutableLiveData<List<Item>>()
     val allItems: LiveData<List<Item>> = _allItems
+    
+    // Store the saved order (initially the original order)
+    private var savedOrder: List<Item> = Item.createSampleItems()
 
     // Computed properties for left and right items
     val leftItems: LiveData<List<Item>> = MutableLiveData<List<Item>>().apply {
@@ -116,6 +119,23 @@ class ItemRepository {
         // Trigger LiveData update by setting the same value
         _allItems.value = currentItems.toList()
         android.util.Log.d("ItemRepository", "Repository values refreshed - Total items: ${currentItems.size}")
+    }
+    
+    /**
+     * Saves the current order as the new default order
+     */
+    fun saveCurrentOrder() {
+        val currentItems = _allItems.value ?: emptyList()
+        savedOrder = currentItems.toList()
+        android.util.Log.d("ItemRepository", "Current order saved as new default - Total items: ${savedOrder.size}")
+    }
+    
+    /**
+     * Resets the data to the saved order (not original order)
+     */
+    fun resetToSavedOrder() {
+        _allItems.value = savedOrder.toList()
+        android.util.Log.d("ItemRepository", "Data reset to saved order - Total items: ${savedOrder.size}")
     }
     
     /**

@@ -93,4 +93,20 @@ class DragDropViewModel : ViewModel() {
         repository.refreshAllValues()
         android.util.Log.d("DragDropViewModel", "All values refreshed in ViewModel")
     }
+    
+    /**
+     * Saves the current order as the new default order
+     */
+    fun saveCurrentOrder() {
+        repository.saveCurrentOrder()
+        android.util.Log.d("DragDropViewModel", "Current order saved as new default")
+    }
+    
+    /**
+     * Resets the data to the saved order (not original order)
+     */
+    fun resetToSavedOrder() {
+        repository.resetToSavedOrder()
+        android.util.Log.d("DragDropViewModel", "Data reset to saved order")
+    }
 }

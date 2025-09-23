@@ -140,12 +140,14 @@ class MainActivity : AppCompatActivity() {
         val logButton = findViewById<Button>(R.id.log_button)
         
         resetButton.setOnClickListener {
-            viewModel.resetData()
-            Toast.makeText(this, "List reset to initial state", Toast.LENGTH_SHORT).show()
+            viewModel.resetToSavedOrder()
+            Toast.makeText(this, "List reset to saved order", Toast.LENGTH_SHORT).show()
         }
         
         logButton.setOnClickListener {
-            // Refresh all repository values first
+            // Save current order as new default
+            viewModel.saveCurrentOrder()
+            // Refresh all repository values
             viewModel.refreshAllValues()
             // Then log the current array order
             logCurrentArrayOrder()
@@ -181,6 +183,6 @@ class MainActivity : AppCompatActivity() {
         }
         
         android.util.Log.d("MainActivity", logMessage)
-        Toast.makeText(this, "Values refreshed and logged to console", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Order saved as default and logged to console", Toast.LENGTH_SHORT).show()
     }
 }
