@@ -282,42 +282,28 @@ class SimpleDragListener(
     }
     
     private fun animateToDropZoneState(view: View) {
-        android.util.Log.d("SimpleDragListener", "Animating to drop zone state")
+        android.util.Log.d("SimpleDragListener", "Setting drop zone state (no animation)")
         
         // Clear any existing animations
         view.clearAnimation()
         
-        // Apply clear visual effects with zone indication
+        // Apply simple visual effects without animation
         view.alpha = 0.8f
-        view.scaleX = 1.08f
-        view.scaleY = 1.08f
-        view.elevation = 6f
-        view.setBackgroundColor(0x50FF6B35) // Orange background with higher opacity
-        view.setPadding(12, 12, 12, 12) // Larger padding for clear zone indication
+        view.scaleX = 1.05f
+        view.scaleY = 1.05f
+        view.elevation = 4f
+        view.setBackgroundColor(0x40FF6B35) // Orange background
+        view.setPadding(8, 8, 8, 8) // Add padding for clear zone indication
         
-        // Add a clear pulse animation with zone indication
-        val pulseAnimation = ScaleAnimation(
-            1.08f, 1.15f,
-            1.08f, 1.15f,
-            Animation.RELATIVE_TO_SELF, 0.5f,
-            Animation.RELATIVE_TO_SELF, 0.5f
-        )
-        pulseAnimation.duration = 600
-        pulseAnimation.repeatCount = Animation.INFINITE
-        pulseAnimation.repeatMode = Animation.REVERSE
-        pulseAnimation.interpolator = AccelerateDecelerateInterpolator()
-        
-        view.startAnimation(pulseAnimation)
-        
-        android.util.Log.d("SimpleDragListener", "Drop zone animation started with clear zone indication")
+        android.util.Log.d("SimpleDragListener", "Drop zone state set without animation")
     }
     
     private fun clearTargetFocus() {
         currentFocusedView?.let { view ->
-            // Stop floating animation
-            stopFloatingAnimation()
+            // Stop any animations
+            view.clearAnimation()
             
-            // Animate back to normal state with slow-motion
+            // Restore normal state without animation
             animateToNormalState(view)
             
             android.util.Log.d("SimpleDragListener", "Target space cleared")
@@ -539,22 +525,12 @@ class SimpleDragListener(
         val targetView = targetRecyclerView.findViewHolderForAdapterPosition(targetPosition)?.itemView
         
         if (targetView != null) {
-            // Create a pulsing animation to show move in progress
-            val pulseAnimation = ScaleAnimation(
-                1.0f, 1.1f,  // scaleX from 1.0 to 1.1
-                1.0f, 1.1f,  // scaleY from 1.0 to 1.1
-                Animation.RELATIVE_TO_SELF, 0.5f,  // pivotX center
-                Animation.RELATIVE_TO_SELF, 0.5f   // pivotY center
-            )
-            pulseAnimation.duration = 250
-            pulseAnimation.repeatCount = 1
-            pulseAnimation.repeatMode = Animation.REVERSE
-            pulseAnimation.interpolator = AccelerateDecelerateInterpolator()
+            // Simple visual feedback without animation
+            targetView.alpha = 0.9f
+            targetView.scaleX = 1.02f
+            targetView.scaleY = 1.02f
             
-            // Start the pulse animation
-            targetView.startAnimation(pulseAnimation)
-            
-            android.util.Log.d("SimpleDragListener", "Move in progress animation started")
+            android.util.Log.d("SimpleDragListener", "Move in progress visual feedback applied")
         }
     }
     
