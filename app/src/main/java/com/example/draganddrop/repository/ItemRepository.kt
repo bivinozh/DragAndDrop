@@ -13,7 +13,7 @@ class ItemRepository {
     // Private mutable data source
     private val _allItems = MutableLiveData<List<Item>>()
     val allItems: LiveData<List<Item>> = _allItems
-    
+
     // Computed properties for left and right items
     val leftItems: LiveData<List<Item>> = MutableLiveData<List<Item>>().apply {
         _allItems.observeForever { items ->
@@ -31,31 +31,7 @@ class ItemRepository {
         // Initialize with sample data
         _allItems.value = Item.createSampleItems()
     }
-    
-    /**
-     * Moves an item from one position to another within the unified array
-     */
-    fun moveItem(fromPosition: Int, toPosition: Int) {
-        val currentItems = _allItems.value?.toMutableList() ?: return
-        
-        if (fromPosition in currentItems.indices && toPosition in currentItems.indices) {
-            val item = currentItems[fromPosition]
-            if (!item.isDraggable) {
-                throw IllegalStateException("Cannot move non-draggable item: ${item.text}")
-            }
-            
-            // Check if target position contains a locked item (prevent replacement)
-            val targetItem = currentItems[toPosition]
-            if (!targetItem.isDraggable) {
-                throw IllegalStateException("Cannot replace locked item: ${targetItem.text}")
-            }
-            
-            currentItems.removeAt(fromPosition)
-            currentItems.add(toPosition, item)
-            _allItems.value = currentItems
-        }
-    }
-    
+
     /**
      * Moves an item between RecyclerViews (left/right sections)
      */
@@ -98,28 +74,22 @@ class ItemRepository {
     fun resetToInitialState() {
         _allItems.value = Item.createSampleItems()
     }
-    
-    /**
-     * Gets an item at a specific position
-     */
-    fun getItemAt(position: Int): Item? {
-        return _allItems.value?.getOrNull(position)
-    }
-    
+
+
     /**
      * Gets the current size of the unified array
      */
     fun getItemCount(): Int {
         return _allItems.value?.size ?: 0
     }
-    
+
     /**
      * Checks if an item at a specific position is draggable
      */
     fun isItemDraggable(position: Int): Boolean {
         return _allItems.value?.getOrNull(position)?.isDraggable ?: false
     }
-    
+
     /**
      * Checks if an item at a specific RecyclerView position is draggable
      */
