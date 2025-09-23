@@ -109,6 +109,16 @@ class ItemRepository {
     }
     
     /**
+     * Refreshes and updates all repository values
+     */
+    fun refreshAllValues() {
+        val currentItems = _allItems.value ?: emptyList()
+        // Trigger LiveData update by setting the same value
+        _allItems.value = currentItems.toList()
+        android.util.Log.d("ItemRepository", "Repository values refreshed - Total items: ${currentItems.size}")
+    }
+    
+    /**
      * Enum to represent RecyclerView types
      */
     enum class RecyclerViewType {

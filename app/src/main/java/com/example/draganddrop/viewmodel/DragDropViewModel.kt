@@ -85,4 +85,12 @@ class DragDropViewModel : ViewModel() {
     fun getAllItems(): List<Item> {
         return repository.getAllItems()
     }
+    
+    /**
+     * Refreshes all repository values (allItems, leftItems, rightItems)
+     */
+    fun refreshAllValues() {
+        repository.refreshAllValues()
+        android.util.Log.d("DragDropViewModel", "All values refreshed in ViewModel")
+    }
 }

@@ -145,6 +145,9 @@ class MainActivity : AppCompatActivity() {
         }
         
         logButton.setOnClickListener {
+            // Refresh all repository values first
+            viewModel.refreshAllValues()
+            // Then log the current array order
             logCurrentArrayOrder()
         }
     }
@@ -178,6 +181,6 @@ class MainActivity : AppCompatActivity() {
         }
         
         android.util.Log.d("MainActivity", logMessage)
-        Toast.makeText(this, "Array order logged to console", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Values refreshed and logged to console", Toast.LENGTH_SHORT).show()
     }
 }
