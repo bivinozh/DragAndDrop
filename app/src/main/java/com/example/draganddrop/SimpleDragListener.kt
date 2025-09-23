@@ -37,7 +37,7 @@ class SimpleDragListener(
                 return true
             }
             DragEvent.ACTION_DRAG_ENTERED -> {
-                view.alpha = 0.7f
+                view.alpha = 0.3f
                 return true
             }
             DragEvent.ACTION_DRAG_EXITED -> {

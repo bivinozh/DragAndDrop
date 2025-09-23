@@ -20,7 +20,21 @@ class ItemRepository {
     // Computed properties for left and right items
     val leftItems: LiveData<List<Item>> = MutableLiveData<List<Item>>().apply {
         _allItems.observeForever { items ->
-            (this as MutableLiveData).value = items.take(10)
+            // Arrange items for display: 1,6,2,7,3,8,4,9,5,10
+            val displayOrder = mutableListOf<Item>()
+            val itemsList = items.take(10)
+            
+            // Add items in alternating pattern for column display
+            for (i in 0..4) {
+                if (i < itemsList.size) {
+                    displayOrder.add(itemsList[i])      // Items 1,2,3,4,5
+                }
+                if (i + 5 < itemsList.size) {
+                    displayOrder.add(itemsList[i + 5])  // Items 6,7,8,9,10
+                }
+            }
+            
+            (this as MutableLiveData).value = displayOrder
         }
     }
     
@@ -44,12 +58,12 @@ class ItemRepository {
         
         // Calculate global positions
         val globalFromPosition = when (fromRecyclerView) {
-            RecyclerViewType.LEFT -> fromPosition
+            RecyclerViewType.LEFT -> leftDisplayPositionToArray(fromPosition)
             RecyclerViewType.RIGHT -> 10 + fromPosition
         }
         
         val globalToPosition = when (toRecyclerView) {
-            RecyclerViewType.LEFT -> toPosition
+            RecyclerViewType.LEFT -> leftDisplayPositionToArray(toPosition)
             RecyclerViewType.RIGHT -> 10 + toPosition
         }
         
@@ -98,7 +112,7 @@ class ItemRepository {
      */
     fun isItemDraggable(recyclerViewType: RecyclerViewType, position: Int): Boolean {
         val globalPosition = when (recyclerViewType) {
-            RecyclerViewType.LEFT -> position
+            RecyclerViewType.LEFT -> leftDisplayPositionToArray(position)
             RecyclerViewType.RIGHT -> 10 + position
         }
         return isItemDraggable(globalPosition)
@@ -136,6 +150,46 @@ class ItemRepository {
     fun resetToSavedOrder() {
         _allItems.value = savedOrder.toList()
         android.util.Log.d("ItemRepository", "Data reset to saved order - Total items: ${savedOrder.size}")
+    }
+    
+    /**
+     * Maps display position to array position for left RecyclerView
+     * Display order: 1,6,2,7,3,8,4,9,5,10
+     * Array order: 1,2,3,4,5,6,7,8,9,10
+     */
+    private fun leftDisplayPositionToArray(displayPosition: Int): Int {
+        return when (displayPosition) {
+            0 -> 0  // Display Item 1 -> Array Item 1
+            1 -> 5  // Display Item 6 -> Array Item 6
+            2 -> 1  // Display Item 2 -> Array Item 2
+            3 -> 6  // Display Item 7 -> Array Item 7
+            4 -> 2  // Display Item 3 -> Array Item 3
+            5 -> 7  // Display Item 8 -> Array Item 8
+            6 -> 3  // Display Item 4 -> Array Item 4
+            7 -> 8  // Display Item 9 -> Array Item 9
+            8 -> 4  // Display Item 5 -> Array Item 5
+            9 -> 9  // Display Item 10 -> Array Item 10
+            else -> displayPosition
+        }
+    }
+    
+    /**
+     * Maps array position to display position for left RecyclerView
+     */
+    private fun leftArrayPositionToDisplay(arrayPosition: Int): Int {
+        return when (arrayPosition) {
+            0 -> 0  // Array Item 1 -> Display Item 1
+            1 -> 2  // Array Item 2 -> Display Item 2
+            2 -> 4  // Array Item 3 -> Display Item 3
+            3 -> 6  // Array Item 4 -> Display Item 4
+            4 -> 8  // Array Item 5 -> Display Item 5
+            5 -> 1  // Array Item 6 -> Display Item 6
+            6 -> 3  // Array Item 7 -> Display Item 7
+            7 -> 5  // Array Item 8 -> Display Item 8
+            8 -> 7  // Array Item 9 -> Display Item 9
+            9 -> 9  // Array Item 10 -> Display Item 10
+            else -> arrayPosition
+        }
     }
     
     /**
