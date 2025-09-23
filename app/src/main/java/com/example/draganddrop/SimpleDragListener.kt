@@ -2,13 +2,7 @@ package com.example.draganddrop
 
 import android.view.DragEvent
 import android.view.View
-import android.view.animation.AccelerateDecelerateInterpolator
-import android.view.animation.Animation
-import android.view.animation.TranslateAnimation
-import android.view.animation.AlphaAnimation
 import android.view.animation.ScaleAnimation
-import android.view.animation.AnimationSet
-import android.view.animation.DecelerateInterpolator
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.GridLayoutManager
 import com.example.draganddrop.viewmodel.DragDropViewModel
@@ -27,10 +21,6 @@ class SimpleDragListener(
     private var currentFocusedView: View? = null
     private var currentFocusedPosition = -1
     private var currentFocusedRecyclerView: RecyclerView? = null
-    
-    // Floating animation
-    private var floatingAnimation: Animation? = null
-    private var isFloating = false
 
     override fun onDrag(view: View, event: DragEvent): Boolean {
         android.util.Log.d("SimpleDragListener", "=== DRAG EVENT RECEIVED ===")
@@ -181,89 +171,6 @@ class SimpleDragListener(
         return adapter?.getItemAt(position)
     }
     
-    private data class OverlapTarget(
-        val view: View,
-        val position: Int,
-        val overlapPercentage: Float
-    )
-    
-    private fun findBestOverlapTarget(targetRecyclerView: RecyclerView, dropX: Int, dropY: Int): OverlapTarget? {
-        android.util.Log.d("SimpleDragListener", "=== FINDING BEST OVERLAP TARGET ===")
-        
-        val childCount = targetRecyclerView.childCount
-        var bestTarget: OverlapTarget? = null
-        var maxOverlap = 0f
-        
-        android.util.Log.d("SimpleDragListener", "Checking $childCount children for overlap")
-        
-        for (i in 0 until childCount) {
-            val childView = targetRecyclerView.getChildAt(i)
-            val position = targetRecyclerView.getChildAdapterPosition(childView)
-            
-            if (position != RecyclerView.NO_POSITION && position >= 0) {
-                val overlapPercentage = calculateOverlapPercentage(childView, dropX, dropY)
-                
-                android.util.Log.d("SimpleDragListener", "Child $i (position $position): overlap = ${overlapPercentage}%")
-                
-                if (overlapPercentage >= 30f && overlapPercentage > maxOverlap) {
-                    maxOverlap = overlapPercentage
-                    bestTarget = OverlapTarget(childView, position, overlapPercentage)
-                    android.util.Log.d("SimpleDragListener", "New best target: position $position with ${overlapPercentage}% overlap")
-                }
-            }
-        }
-        
-        if (bestTarget != null) {
-            android.util.Log.d("SimpleDragListener", "Best overlap target: position ${bestTarget.position} with ${bestTarget.overlapPercentage}% overlap")
-        } else {
-            android.util.Log.d("SimpleDragListener", "No valid overlap target found (30% threshold not met)")
-        }
-        
-        return bestTarget
-    }
-    
-    private fun calculateOverlapPercentage(childView: View, dropX: Int, dropY: Int): Float {
-        val childLeft = childView.left
-        val childRight = childView.right
-        val childTop = childView.top
-        val childBottom = childView.bottom
-        
-        android.util.Log.d("SimpleDragListener", "=== CALCULATING OVERLAP PERCENTAGE ===")
-        android.util.Log.d("SimpleDragListener", "Child bounds: left=$childLeft, right=$childRight, top=$childTop, bottom=$childBottom")
-        android.util.Log.d("SimpleDragListener", "Drop point: ($dropX, $dropY)")
-        
-        // Calculate the area of the child view
-        val childWidth = childRight - childLeft
-        val childHeight = childBottom - childTop
-        val childArea = childWidth * childHeight
-        
-        android.util.Log.d("SimpleDragListener", "Child dimensions: ${childWidth}x${childHeight}, area=$childArea")
-        
-        // Calculate the overlap area (50x50 drop area)
-        val overlapLeft = Math.max(childLeft, dropX - 25)
-        val overlapRight = Math.min(childRight, dropX + 25)
-        val overlapTop = Math.max(childTop, dropY - 25)
-        val overlapBottom = Math.min(childBottom, dropY + 25)
-        
-        val overlapWidth = Math.max(0, overlapRight - overlapLeft)
-        val overlapHeight = Math.max(0, overlapBottom - overlapTop)
-        val overlapArea = overlapWidth * overlapHeight
-        
-        android.util.Log.d("SimpleDragListener", "Overlap bounds: left=$overlapLeft, right=$overlapRight, top=$overlapTop, bottom=$overlapBottom")
-        android.util.Log.d("SimpleDragListener", "Overlap dimensions: ${overlapWidth}x${overlapHeight}, area=$overlapArea")
-        
-        // Calculate overlap percentage
-        val overlapPercentage = if (childArea > 0) {
-            (overlapArea.toFloat() / childArea.toFloat()) * 100f
-        } else {
-            0f
-        }
-        
-        android.util.Log.d("SimpleDragListener", "Overlap percentage: ${overlapPercentage}%")
-        
-        return overlapPercentage
-    }
-    
     
     private fun setTargetFocus(targetView: View?, targetPosition: Int, targetRecyclerView: RecyclerView?) {
         // Clear previous focus
@@ -342,167 +249,6 @@ class SimpleDragListener(
             android.util.Log.d("SimpleDragListener", "No child view found - clearing focus")
             clearTargetFocus()
         }
-    }
-    
-    private fun setOverlapTargetFocus(targetView: View?, targetPosition: Int, targetRecyclerView: RecyclerView?, overlapPercentage: Float) {
-        // Clear previous focus
-        clearTargetFocus()
-
-        if (targetView != null && targetPosition >= 0) {
-            currentFocusedView = targetView
-            currentFocusedPosition = targetPosition
-            currentFocusedRecyclerView = targetRecyclerView
-
-            android.util.Log.d("SimpleDragListener", "Setting overlap target focus on position: $targetPosition with ${overlapPercentage}% overlap")
-            
-            // Apply enhanced visual effects based on overlap percentage
-            animateToOverlapState(targetView, overlapPercentage)
-        }
-    }
-    
-    private fun animateToOverlapState(view: View, overlapPercentage: Float) {
-        android.util.Log.d("SimpleDragListener", "Animating to overlap state with ${overlapPercentage}% overlap")
-        
-        // Clear any existing animations
-        view.clearAnimation()
-        
-        // Set visual properties based on overlap percentage
-        when {
-            overlapPercentage >= 60f -> {
-                // High overlap - strong visual feedback
-                view.alpha = 0.2f
-                view.scaleX = 0.9f
-                view.scaleY = 0.9f
-                view.elevation = 4f
-                view.setBackgroundColor(0x60FF0000) // Red with high opacity
-                view.setPadding(6, 6, 6, 6)
-                
-                // Strong pulse animation
-                val pulseAnimation = ScaleAnimation(
-                    0.9f, 1.1f,
-                    0.9f, 1.1f,
-                    Animation.RELATIVE_TO_SELF, 0.5f,
-                    Animation.RELATIVE_TO_SELF, 0.5f
-                )
-                pulseAnimation.duration = 200 // Very fast for high overlap
-                pulseAnimation.repeatCount = Animation.INFINITE
-                pulseAnimation.repeatMode = Animation.REVERSE
-                pulseAnimation.interpolator = AccelerateDecelerateInterpolator()
-                view.startAnimation(pulseAnimation)
-            }
-            overlapPercentage >= 45f -> {
-                // Medium-high overlap - moderate visual feedback
-                view.alpha = 0.3f
-                view.scaleX = 0.95f
-                view.scaleY = 0.95f
-                view.elevation = 3f
-                view.setBackgroundColor(0x40FF8800) // Orange with medium opacity
-                view.setPadding(4, 4, 4, 4)
-                
-                // Moderate pulse animation
-                val pulseAnimation = ScaleAnimation(
-                    0.95f, 1.05f,
-                    0.95f, 1.05f,
-                    Animation.RELATIVE_TO_SELF, 0.5f,
-                    Animation.RELATIVE_TO_SELF, 0.5f
-                )
-                pulseAnimation.duration = 300 // Fast for medium overlap
-                pulseAnimation.repeatCount = Animation.INFINITE
-                pulseAnimation.repeatMode = Animation.REVERSE
-                pulseAnimation.interpolator = AccelerateDecelerateInterpolator()
-                view.startAnimation(pulseAnimation)
-            }
-            else -> {
-                // Low overlap (30-45%) - subtle visual feedback
-                view.alpha = 0.4f
-                view.scaleX = 0.98f
-                view.scaleY = 0.98f
-                view.elevation = 2f
-                view.setBackgroundColor(0x30FFAA00) // Yellow with low opacity
-                view.setPadding(2, 2, 2, 2)
-                
-                // Subtle pulse animation
-                val pulseAnimation = ScaleAnimation(
-                    0.98f, 1.02f,
-                    0.98f, 1.02f,
-                    Animation.RELATIVE_TO_SELF, 0.5f,
-                    Animation.RELATIVE_TO_SELF, 0.5f
-                )
-                pulseAnimation.duration = 400 // Normal speed for low overlap
-                pulseAnimation.repeatCount = Animation.INFINITE
-                pulseAnimation.repeatMode = Animation.REVERSE
-                pulseAnimation.interpolator = AccelerateDecelerateInterpolator()
-                view.startAnimation(pulseAnimation)
-            }
-        }
-    }
-    
-    private fun startFloatingAnimation(view: View) {
-        if (isFloating) return
-        
-        isFloating = true
-        
-        // Create floating animation (up and down movement)
-        val floatUp = TranslateAnimation(0f, 0f, 0f, -8f)
-        floatUp.duration = 800
-        floatUp.interpolator = AccelerateDecelerateInterpolator()
-        
-        val floatDown = TranslateAnimation(0f, 0f, -8f, 0f)
-        floatDown.duration = 800
-        floatDown.interpolator = AccelerateDecelerateInterpolator()
-        floatDown.startOffset = 800
-        
-        // Create animation set
-        val animationSet = android.view.animation.AnimationSet(false)
-        animationSet.addAnimation(floatUp)
-        animationSet.addAnimation(floatDown)
-        animationSet.repeatCount = Animation.INFINITE
-        animationSet.repeatMode = Animation.REVERSE
-        
-        floatingAnimation = animationSet
-        view.startAnimation(animationSet)
-        
-        android.util.Log.d("SimpleDragListener", "Floating animation started")
-    }
-    
-    private fun stopFloatingAnimation() {
-        if (!isFloating) return
-        
-        floatingAnimation?.let { animation ->
-            animation.cancel()
-            currentFocusedView?.clearAnimation()
-        }
-        
-        floatingAnimation = null
-        isFloating = false
-        
-        android.util.Log.d("SimpleDragListener", "Floating animation stopped")
-    }
-    
-    private fun animateToOccupiedState(view: View) {
-        // Apply visual changes immediately
-        view.alpha = 0.3f
-        view.scaleX = 0.95f
-        view.scaleY = 0.95f
-        view.elevation = 2f
-        view.setBackgroundColor(0x40FF0000) // Semi-transparent red background
-        view.setPadding(4, 4, 4, 4) // Add padding to create border effect
-        
-        // Add a simple pulse animation
-        val pulseAnimation = ScaleAnimation(
-            0.95f, 1.0f,  // scaleX from 0.95 to 1.0
-            0.95f, 1.0f,  // scaleY from 0.95 to 1.0
-            Animation.RELATIVE_TO_SELF, 0.5f,  // pivotX center
-            Animation.RELATIVE_TO_SELF, 0.5f   // pivotY center
-        )
-        pulseAnimation.duration = 1000
-        pulseAnimation.repeatCount = Animation.INFINITE
-        pulseAnimation.repeatMode = Animation.REVERSE
-        pulseAnimation.interpolator = AccelerateDecelerateInterpolator()
-        
-        view.startAnimation(pulseAnimation)
-        
-        android.util.Log.d("SimpleDragListener", "Occupied animation started")
     }
     
     private fun animateToNormalState(view: View) {
